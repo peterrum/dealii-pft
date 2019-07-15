@@ -42,6 +42,14 @@ For this we use simply apply `dealii::GridTools::partition_triangulation()` onto
 the serial triangulation. In a second step, the locally relevant mesh info is extracted
 and used to setup `PFT`.
 
+```cpp
+cd step-0
+mkdir build
+cd build
+cmake ..
+mpirun -np 5 ./main 2 4 # dim, n_refinements
+```
+
 **Results**
 
 **Note:** This use case is motivated by tests of `parallel::split::Triangulation` discussed
