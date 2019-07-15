@@ -3,10 +3,36 @@
 This repo contains programs clarifying the usage of the new `parallel::fullydistributed::Triangulation` (short: `PFT`)
 in deal.II. For implementation details see the attached presentation and/or the source code.
 
-In the following, I give some short examples using `PFT`. The exaples are ordered according to their difficulty in 
+**Note:** The origin of the name `parallel::fullydistributed::Triangulation` is the need to 
+distinguish the class from `parallel::distributed::Triangulation` and to emphasis that also
+the coarse mesh is partitioned. Please feel free to suggest alternative names!  
+
+## Concept
+
+
+
+## Tutorials
+
+In the following, I give some short examples using `PFT`. The examples are ordered according to their difficulty in 
 steps.
 
-## Step 1: Static, globally uniformly refined mesh
+The flexibility of having a front-end and a back-end should become obvious.
+
+**Note:** The tutorials are a list of tested applications. Please feel free to 
+suggests additional use cases and/or to extend the relevant classes.
+
+## Step 0: Static, globally uniformly refined mesh (serial)
+
+**Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
+
+All processes color all active cells of a serial triangulation in the same way.
+
+**Results**
+
+**Note:** This use case is motivated by tests of `parallel::split::Triangulation` discussed
+in [PR 3956](https://github.com/dealii/dealii/pull/3956).
+
+## Step 1: Static, globally uniformly refined mesh (parallel)
 
 Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
 
