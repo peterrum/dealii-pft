@@ -40,6 +40,8 @@ mpirun -np 5 ./main 2 4 8
 
 ## Step 5: Partition a serial mesh with periodic faces
 
+The same as step-4, but with periodic faces in x-direction.
+
 ## Step 6: Repartition a distributed mesh
 
  using ParMETIS
