@@ -38,7 +38,9 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-## Step 5: Repartition a distributed mesh
+## Step 5: Partition a serial mesh with periodic faces
+
+## Step 6: Repartition a distributed mesh
 
  using ParMETIS
 

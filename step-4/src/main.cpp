@@ -18,11 +18,11 @@ test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
   // create pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-  
+
   tria_pft.reinit(n_refinements, [&](dealii::Triangulation<dim> & tria) mutable {
-          GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
-          tria.refine_global(n_refinements);
-        });
+    GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
+    tria.refine_global(n_refinements);
+  });
 
 
   // output mesh as VTU
