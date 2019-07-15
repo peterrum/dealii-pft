@@ -89,7 +89,7 @@ extract_info(const Triangulation<dim> &           tria,
         // gid, subdomain_id, and leve_subdomain_id of ghost cells
         part.ghost.push_back(indices[0]);
         part.ghost_rank.push_back(cell->subdomain_id());
-        part.ghost_rank_mg.push_back(cell->subdomain_id());
+        part.ghost_rank_mg.push_back(cell->level_subdomain_id());
       }
       cell_counter++;
     }
@@ -122,6 +122,7 @@ test(int n_refinements, MPI_Comm comm)
   GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
                                      basetria,
                                      SparsityTools::Partitioner::metis);
+  GridTools::partition_multigrid_levels(basetria);
 
   // extract relevant information from pdt to be able to create pft
   std::vector<CellData<dim>>         cells;

@@ -7,6 +7,17 @@ in deal.II. For implementation details see the attached presentation and/or the 
 distinguish the class from `parallel::distributed::Triangulation` and to emphasis that also
 the coarse mesh is partitioned. Please feel free to suggest alternative names!  
 
+## Requirements
+
+An (incomplete) list of requirements:
+- [x] extract from `dealii::Triangulation` (serial triangulation) 
+- [x] extract from `dealii::distributed::Triangulation` (parallel triangulation) 
+- [x] static mesh
+- [ ] hanging nodes
+- [ ] adaptive mesh
+- [x] multigrid
+- [x] periodicity
+
 ## Concept
 
 ## Examples (and nice pictures)
