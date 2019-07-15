@@ -42,6 +42,14 @@ mpirun -np 5 ./main 2 4 8
 
 The same as step-4, but with periodic faces in x-direction.
 
+```cpp
+cd step-5 
+mkdir build
+cd build
+cmake ..
+mpirun -np 5 ./main 2 4 8
+```
+
 ## Step 6: Repartition a distributed mesh
 
  using ParMETIS
