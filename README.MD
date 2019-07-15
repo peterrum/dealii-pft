@@ -42,7 +42,7 @@ For this we use simply apply `dealii::GridTools::partition_triangulation()` onto
 the serial triangulation. In a second step, the locally relevant mesh info is extracted
 and used to setup `PFT`.
 
-```cpp
+```bash
 cd step-0
 mkdir build
 cd build
@@ -59,7 +59,7 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
 
-```cpp
+```bash
 cd step-1
 mkdir build
 cd build
@@ -79,7 +79,7 @@ Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
 using METIS
 
-```cpp
+```bash
 cd step-4
 mkdir build
 cd build
@@ -91,7 +91,7 @@ mpirun -np 5 ./main 2 4 8
 
 The same as step-4, but with periodic faces in x-direction.
 
-```cpp
+```bash
 cd step-5 
 mkdir build
 cd build
