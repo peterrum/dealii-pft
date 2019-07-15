@@ -11,8 +11,7 @@ steps.
 Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
 
 ```cpp
-mkdir direct-setup
-cd direct-setup
+cd step-1
 mkdir build
 cd build
 cmake ..
@@ -30,6 +29,14 @@ Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 ## Step 4: Partition a serial mesh 
 
 using METIS
+
+```cpp
+cd step-4
+mkdir build
+cd build
+cmake ..
+mpirun -np 5 ./main 2 4 8
+```
 
 ## Step 5: Repartition a distributed mesh
 
