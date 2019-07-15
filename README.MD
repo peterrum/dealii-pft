@@ -9,7 +9,15 @@ the coarse mesh is partitioned. Please feel free to suggest alternative names!
 
 ## Concept
 
+## Examples (and nice pictures)
 
+### NACA 0012 airfoil
+
+Thanks to: eliasstudiert
+
+### Lung
+
+Thanks to: kronbichler
 
 ## Tutorials
 
@@ -21,7 +29,7 @@ The flexibility of having a front-end and a back-end should become obvious.
 **Note:** The tutorials are a list of tested applications. Please feel free to 
 suggests additional use cases and/or to extend the relevant classes.
 
-## Step 0: Static, globally uniformly refined mesh (serial)
+### Step 0: Static, globally uniformly refined mesh (serial)
 
 **Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
@@ -30,9 +38,9 @@ All processes color all active cells of a serial triangulation in the same way.
 **Results**
 
 **Note:** This use case is motivated by tests of `parallel::split::Triangulation` discussed
-in [PR 3956](https://github.com/dealii/dealii/pull/3956).
+in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
-## Step 1: Static, globally uniformly refined mesh (parallel)
+### Step 1: Static, globally uniformly refined mesh (parallel)
 
 Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
 
@@ -44,15 +52,15 @@ cmake ..
 mpirun -np 5 ./main 2 8
 ```
 
-## Step 2: Static, globally non-uniformly refined mesh 
+### Step 2: Static, globally non-uniformly refined mesh 
 
 ???
 
-## Step 3: Static, globally uniformly refined mesh with multigrid levels
+### Step 3: Static, globally uniformly refined mesh with multigrid levels
 
 Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
-## Step 4: Partition a serial mesh 
+### Step 4: Partition a serial mesh 
 
 using METIS
 
@@ -64,7 +72,7 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-## Step 5: Partition a serial mesh with periodic faces
+### Step 5: Partition a serial mesh with periodic faces
 
 The same as step-4, but with periodic faces in x-direction.
 
@@ -76,7 +84,7 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-## Step 6: Repartition a distributed mesh
+### Step 6: Repartition a distributed mesh
 
  using ParMETIS
 
