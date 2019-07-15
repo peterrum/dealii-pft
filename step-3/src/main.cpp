@@ -24,70 +24,41 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
   FE_DGQ<dim>     fe(0);
   DoFHandler<dim> dof_handler(tria);
   dof_handler.distribute_dofs(fe);
+  dof_handler.distribute_mg_dofs();
 
-  // 2) collect vertices of active locally owned cells
-  std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
-  for(auto cell : dof_handler.cell_iterators())
-    if(cell->active() && cell->is_locally_owned())
-      for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-        vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
-
-  // helper function to determine if cell is locally relevant
-  auto is_ghost = [&](auto & cell) {
-    for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-      if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
-         vertices_owned_by_loclly_owned_cells.end())
-        return true;
-    return false;
-  };
-
-  // 3) process all local and ghost cells: setup needed data structures and
-  //    collect all locally relevant vertices for second sweep
+  // 2) collect vertices of cells on level 0
   std::map<unsigned int, unsigned int> vertices_locally_relevant;
-  parts.push_back(Part());
-  Part & part = parts[0];
 
   unsigned int cell_counter = 0;
-  for(auto cell : dof_handler.cell_iterators())
-    if(cell->active() && (cell->is_locally_owned() || is_ghost(cell)))
-    {
-      // a) extract cell definition (with old numbering of vertices)
-      CellData<dim> cell_data;
-      cell_data.material_id = cell->material_id();
-      for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-        cell_data.vertices[v] = cell->vertex_index(v);
-      cells.push_back(cell_data);
+  for(auto cell : dof_handler.cell_iterators_on_level(0))
+  {
+    // a) determine gid of this cell
+    std::vector<types::global_dof_index> indices(1);
+    cell->get_mg_dof_indices(indices);
 
-      // b) save indices of each vertex of this cell
-      for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-        vertices_locally_relevant[cell->vertex_index(v)] = numbers::invalid_unsigned_int;
+    if(indices[0] == numbers::invalid_dof_index)
+      continue;
 
-      // c) save boundary_ids of each face of this cell
-      for(unsigned int f = 0; f < GeometryInfo<dim>::faces_per_cell; f++)
-        boundary_ids.push_back(cell->face(f)->boundary_id());
+    // b) extract cell definition (with old numbering of vertices)
+    CellData<dim> cell_data;
+    cell_data.material_id = cell->material_id();
+    for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+      cell_data.vertices[v] = cell->vertex_index(v);
+    cells.push_back(cell_data);
 
-      // d) determine gid of this cell
-      std::vector<types::global_dof_index> indices(1);
-      cell->get_dof_indices(indices);
+    // c) save indices of each vertex of this cell
+    for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+      vertices_locally_relevant[cell->vertex_index(v)] = numbers::invalid_unsigned_int;
 
-      // e) save translation for corase grid: lid -> gid
-      coarse_lid_to_gid[cell_counter] = {indices[0], cell->subdomain_id()};
+    // d) save boundary_ids of each face of this cell
+    for(unsigned int f = 0; f < GeometryInfo<dim>::faces_per_cell; f++)
+      boundary_ids.push_back(cell->face(f)->boundary_id());
 
-      // f) save level information
-      if(cell->is_locally_owned())
-      {
-        // gid of local cells
-        part.local.push_back(indices[0]);
-      }
-      else
-      {
-        // gid, subdomain_id, and leve_subdomain_id of ghost cells
-        part.ghost.push_back(indices[0]);
-        part.ghost_rank.push_back(cell->subdomain_id());
-        part.ghost_rank_mg.push_back(cell->level_subdomain_id());
-      }
-      cell_counter++;
-    }
+    // e) save translation for corase grid: lid -> gid
+    coarse_lid_to_gid[cell_counter] = {indices[0], cell->level_subdomain_id()};
+
+    cell_counter++;
+  }
 
   // 4) enumerate locally relevant
   unsigned int vertex_counter = 0;
@@ -101,6 +72,83 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
   for(auto & cell : cells)
     for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
       cell.vertices[v] = vertices_locally_relevant[cell.vertices[v]];
+
+
+  auto convert_binary_to_gid = [](const std::array<unsigned int, 4> binary_representation) {
+    const unsigned int coarse_cell_id = binary_representation[0];
+
+    const unsigned int n_child_indices = binary_representation[1] >> 2;
+
+    const unsigned int children_per_value = sizeof(CellId::binary_type::value_type) * 8 / dim;
+    unsigned int       child_level        = 0;
+    unsigned int       binary_entry       = 2;
+
+    std::vector<unsigned int> cell_indices;
+
+    // Loop until all child indices have been written
+    while(child_level < n_child_indices)
+    {
+      Assert(binary_entry < binary_representation.size(), ExcInternalError());
+
+      for(unsigned int j = 0; j < children_per_value; ++j)
+      {
+        // const unsigned int child_index =
+        //  static_cast<unsigned int>(child_indices[child_level]);
+        // Shift the child index to its position in the unsigned int and store
+        // it
+        unsigned int cell_index = (((binary_representation[binary_entry] >> (j * dim))) &
+                                   (GeometryInfo<dim>::max_children_per_cell - 1));
+        cell_indices.push_back(cell_index);
+        ++child_level;
+        if(child_level == n_child_indices)
+          break;
+      }
+      ++binary_entry;
+    }
+
+    unsigned int temp = coarse_cell_id;
+    for(auto i : cell_indices)
+    {
+      temp = temp * GeometryInfo<dim>::max_children_per_cell + i;
+    }
+
+    return temp;
+  };
+
+  for(unsigned int level = 0; level < dof_handler.get_triangulation().n_global_levels(); level++)
+  {
+    parts.push_back(Part());
+    Part & part = parts.back();
+    for(auto cell : dof_handler.cell_iterators_on_level(level))
+    {
+      // a) determine gid of this cell
+      std::vector<types::global_dof_index> indices(1);
+      cell->get_mg_dof_indices(indices);
+
+      if(indices[0] == numbers::invalid_dof_index)
+        continue;
+
+      const unsigned int index = convert_binary_to_gid(cell->id().template to_binary<dim>());
+
+      if(cell->is_locally_owned_on_level())
+      {
+        // gid of local cells
+        part.local.push_back(index);
+      }
+      else
+      {
+        // gid, subdomain_id, and leve_subdomain_id of ghost cells
+        part.ghost.push_back(index);
+
+        if(cell->active())
+          part.ghost_rank.push_back(cell->subdomain_id());
+        else
+          part.ghost_rank.push_back(cell->level_subdomain_id());
+
+        part.ghost_rank_mg.push_back(cell->level_subdomain_id());
+      }
+    }
+  }
 }
 
 
@@ -114,7 +162,7 @@ test(int n_refinements, MPI_Comm comm)
     comm,
     dealii::Triangulation<dim>::none,
     parallel::distributed::Triangulation<dim>::construct_multigrid_hierarchy);
-  GridGenerator::hyper_cube(tria_pdt);
+  GridGenerator::subdivided_hyper_cube(tria_pdt, 8);
   tria_pdt.refine_global(n_refinements);
 
   // extract relevant information from pdt to be able to create pft
@@ -128,7 +176,7 @@ test(int n_refinements, MPI_Comm comm)
 
   // create pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-  tria_pft.reinit(cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
+  tria_pft.reinit(cells, vertices, boundary_ids, coarse_lid_to_gid, parts, n_refinements);
 
   // output meshes as VTU
   GridOut grid_out;
