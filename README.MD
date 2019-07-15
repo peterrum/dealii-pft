@@ -15,8 +15,9 @@ An (incomplete) list of requirements:
 - [x] static mesh
 - [ ] hanging nodes
 - [ ] adaptive mesh
-- [x] multigrid
+- [x] geometric multigrid
 - [x] periodicity
+- [x] 1D/2D/3D
 
 ## Concept
 
@@ -24,15 +25,15 @@ An (incomplete) list of requirements:
 
 ### NACA 0012 airfoil
 
-Thanks to: [eliasstudiert](https://github.com/eliasstudiert)
+Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
 
 ### Can
 
-Thanks to: [daniel-dengler](https://github.com/daniel-dengler)
+Thanks to: [Daniel Dengler](https://github.com/daniel-dengler)
 
 ### Lung
 
-Thanks to: [kronbichler](https://github.com/kronbichler)
+Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
 ## Tutorials
 
