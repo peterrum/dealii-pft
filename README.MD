@@ -21,5 +21,18 @@ mpirun -np 5 ./main 2 8
 
 ## Step 2: Static, globally non-uniformly refined mesh 
 
+???
+
+## Step 3: Static, globally uniformly refined mesh with multigrid levels
+
+Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
+
+## Step 4: Partition a serial mesh 
+
+using METIS
+
+## Step 5: Repartition a distributed mesh
+
+ using ParMETIS
 
 
