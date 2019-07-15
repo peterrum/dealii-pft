@@ -13,11 +13,15 @@ the coarse mesh is partitioned. Please feel free to suggest alternative names!
 
 ### NACA 0012 airfoil
 
-Thanks to: eliasstudiert
+Thanks to: [eliasstudiert](https://github.com/eliasstudiert)
+
+### Can
+
+Thanks to: [daniel-dengler](https://github.com/daniel-dengler)
 
 ### Lung
 
-Thanks to: kronbichler
+Thanks to: [kronbichler](https://github.com/kronbichler)
 
 ## Tutorials
 
@@ -33,7 +37,10 @@ suggests additional use cases and/or to extend the relevant classes.
 
 **Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
-All processes color all active cells of a serial triangulation in the same way.
+In the first step, all processes color all active cells of a serial triangulation in the same way.
+For this we use simply apply `dealii::GridTools::partition_triangulation()` onto
+the serial triangulation. In a second step, the locally relevant mesh info is extracted
+and used to setup `PFT`.
 
 **Results**
 

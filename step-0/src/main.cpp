@@ -36,8 +36,6 @@ extract_info(const Triangulation<dim> &           tria,
       for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
         vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
 
-  std::cout << "  " << vertices_owned_by_loclly_owned_cells.size() << std::endl;
-
   // helper function to determine if cell is locally relevant
   auto is_ghost = [&](auto & cell) {
     for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
