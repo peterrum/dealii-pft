@@ -27,19 +27,16 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
                                      SparsityTools::Partitioner::metis);
   GridTools::partition_multigrid_levels(basetria);
 
-  // extract relevant information from pdt to be able to create pft
-  std::vector<CellData<dim>>         cells;
-  std::vector<Point<dim>>            vertices;
-  std::vector<int>                   boundary_ids;
-  std::map<int, std::pair<int, int>> coarse_lid_to_gid;
-  std::vector<Part>                  parts;
+  // create instance of pft
+  parallel::fullydistributed::Triangulation<dim> tria_pft(
+    comm, parallel::fullydistributed::Triangulation<dim>::construct_multigrid_hierarchy);
 
-  parallel::fullydistributed::Utilities::copy_from_serial_triangulation_mg(
-    basetria, comm, cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
+  // extract relevant information form serial triangulation
+  auto construction_data =
+    parallel::fullydistributed::Utilities::copy_from_serial_triangulation(basetria, tria_pft);
 
-  // create pft
-  parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-  tria_pft.reinit(cells, vertices, boundary_ids, coarse_lid_to_gid, parts, n_refinements);
+  // actually create triangulation
+  tria_pft.reinit(construction_data, n_refinements);
 
   // output meshes as VTU
   GridOut grid_out;

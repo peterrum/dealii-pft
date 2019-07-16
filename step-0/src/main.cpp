@@ -24,21 +24,16 @@ test(int n_refinements, MPI_Comm comm)
   GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
                                      basetria,
                                      SparsityTools::Partitioner::metis);
-  GridTools::partition_multigrid_levels(basetria);
 
-  // extract relevant information from pdt to be able to create pft
-  std::vector<CellData<dim>>         cells;
-  std::vector<Point<dim>>            vertices;
-  std::vector<int>                   boundary_ids;
-  std::map<int, std::pair<int, int>> coarse_lid_to_gid;
-  std::vector<Part>                  parts;
-
-  parallel::fullydistributed::Utilities::copy_from_serial_triangulation(
-    basetria, comm, cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
-
-  // create pft
+  // create instance of pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-  tria_pft.reinit(cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
+
+  // extract relevant information form serial triangulation
+  auto construction_data =
+    parallel::fullydistributed::Utilities::copy_from_serial_triangulation(basetria, tria_pft);
+
+  // actually create triangulation
+  tria_pft.reinit(construction_data, n_refinements);
 
   // output meshes as VTU
   GridOut grid_out;
