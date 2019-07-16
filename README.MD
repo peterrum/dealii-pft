@@ -88,7 +88,19 @@ mpirun -np 5 ./main 2 8
 
 ???
 
-### Step 3: Static, globally uniformly refined mesh with multigrid levels
+### Step 3: Static, globally uniformly refined mesh with multigrid levels (serial)
+
+Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
+
+
+```bash
+cd step-3 
+mkdir build
+cd build
+cmake ..
+mpirun -np 5 ./main 2 4 8
+
+### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
 Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
@@ -101,7 +113,7 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-### Step 4: Partition a serial mesh 
+### Step 5: Partition a serial mesh 
 
 using METIS
 
@@ -113,7 +125,7 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-### Step 5: Partition a serial mesh with periodic faces
+### Step 6: Partition a serial mesh with periodic faces
 
 The same as step-4, but with periodic faces in x-direction.
 
@@ -125,11 +137,11 @@ cmake ..
 mpirun -np 5 ./main 2 4 8
 ```
 
-### Step 6: Repartition a distributed mesh
+### Step 7: Repartition a distributed mesh
 
  using ParMETIS
 
-### Step 7: Advanced topics
+### Step 8: Advanced topics
 
 - two-level partitioning to enable data locality on a compute node
 

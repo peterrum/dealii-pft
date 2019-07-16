@@ -6,19 +6,30 @@
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/grid_tools.h>
 
 const MPI_Comm comm = MPI_COMM_WORLD;
 
 using namespace dealii;
 
+template<typename CELL>
+void
+set_flag_reverse(CELL cell)
+{
+  cell->set_user_flag();
+  if(cell->level() != 0)
+    set_flag_reverse(cell->parent());
+}
+
 template<int dim>
 void
-extract_info(const parallel::distributed::Triangulation<dim> & tria,
-             std::vector<CellData<dim>> &                      cells,
-             std::vector<Point<dim>> &                         vertices,
-             std::vector<int> &                                boundary_ids,
-             std::map<int, std::pair<int, int>> &              coarse_lid_to_gid,
-             std::vector<Part> &                               parts)
+extract_info(const Triangulation<dim> &           tria,
+             const MPI_Comm                       comm,
+             std::vector<CellData<dim>> &         cells,
+             std::vector<Point<dim>> &            vertices,
+             std::vector<int> &                   boundary_ids,
+             std::map<int, std::pair<int, int>> & coarse_lid_to_gid,
+             std::vector<Part> &                  parts)
 {
   // 1) enumerate cells of original triangulation globally uniquelly
   FE_DGQ<dim>     fe(0);
@@ -26,8 +37,37 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
   dof_handler.distribute_dofs(fe);
   dof_handler.distribute_mg_dofs();
 
+  const unsigned int my_rank = Utilities::MPI::this_mpi_process(comm);
+
   // 2) collect vertices of cells on level 0
   std::map<unsigned int, unsigned int> vertices_locally_relevant;
+
+  for(auto cell : dof_handler.cell_iterators_on_level(0))
+    cell->recursively_clear_user_flag();
+
+  for(unsigned int level = dof_handler.get_triangulation().n_global_levels() - 1; level != 0;
+      level--)
+  {
+    std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
+    for(auto cell : dof_handler.cell_iterators_on_level(level))
+      if(cell->level_subdomain_id() == my_rank ||
+         (cell->active() && cell->subdomain_id() == my_rank))
+        for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+          vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+
+    // helper function to determine if cell is locally relevant
+    auto is_ghost = [&](auto & cell) {
+      for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+        if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
+           vertices_owned_by_loclly_owned_cells.end())
+          return true;
+      return false;
+    };
+
+    for(auto cell : dof_handler.cell_iterators_on_level(level))
+      if(is_ghost(cell))
+        set_flag_reverse(cell);
+  }
 
   unsigned int cell_counter = 0;
   for(auto cell : dof_handler.cell_iterators_on_level(0))
@@ -36,7 +76,7 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
     std::vector<types::global_dof_index> indices(1);
     cell->get_mg_dof_indices(indices);
 
-    if(indices[0] == numbers::invalid_dof_index)
+    if(!cell->user_flag_set())
       continue;
 
     // b) extract cell definition (with old numbering of vertices)
@@ -125,7 +165,7 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
       std::vector<types::global_dof_index> indices(1);
       cell->get_mg_dof_indices(indices);
 
-      if(indices[0] == numbers::invalid_dof_index)
+      if(!cell->user_flag_set())
         continue;
 
       const unsigned int index = convert_binary_to_gid(cell->id().template to_binary<dim>());
@@ -158,12 +198,14 @@ void
 test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
   // create pdt
-  parallel::distributed::Triangulation<dim> tria_pdt(
-    comm,
-    dealii::Triangulation<dim>::none,
-    parallel::distributed::Triangulation<dim>::construct_multigrid_hierarchy);
-  GridGenerator::subdivided_hyper_cube(tria_pdt, n_subdivisions);
-  tria_pdt.refine_global(n_refinements);
+  Triangulation<dim> basetria(Triangulation<dim>::limit_level_difference_at_vertices);
+  GridGenerator::subdivided_hyper_cube(basetria, n_subdivisions);
+  basetria.refine_global(n_refinements);
+
+  GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
+                                     basetria,
+                                     SparsityTools::Partitioner::metis);
+  GridTools::partition_multigrid_levels(basetria);
 
   // extract relevant information from pdt to be able to create pft
   std::vector<CellData<dim>>         cells;
@@ -172,7 +214,7 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
   std::map<int, std::pair<int, int>> coarse_lid_to_gid;
   std::vector<Part>                  parts;
 
-  extract_info(tria_pdt, cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
+  extract_info(basetria, comm, cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
 
   // create pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
@@ -180,7 +222,7 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 
   // output meshes as VTU
   GridOut grid_out;
-  grid_out.write_mesh_per_processor_as_vtu(tria_pdt, "trid_pdt", true, true);
+  grid_out.write_mesh_per_processor_as_vtu(basetria, "trid_pdt", true, true);
   grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", true, true);
 }
 
@@ -197,7 +239,9 @@ main(int argc, char ** argv)
   const int n_refinements  = atoi(argv[2]);
   const int n_subdivisions = atoi(argv[3]);
 
-  if(dim == 2)
+  if(dim == 1)
+    test<1>(n_refinements, n_subdivisions, comm);
+  else if(dim == 2)
     test<2>(n_refinements, n_subdivisions, comm);
   else if(dim == 3)
     test<3>(n_refinements, n_subdivisions, comm);

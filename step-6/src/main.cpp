@@ -6,6 +6,7 @@
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/grid_tools.h>
 
 const MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -19,10 +20,36 @@ test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
   // create pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
 
+  const double left  = 0;
+  const double right = 0;
+
+  auto add_periodicy = [&](dealii::Triangulation<dim> & tria, const int offset = 0) {
+    std::vector<GridTools::PeriodicFacePair<typename Triangulation<dim>::cell_iterator>>
+         periodic_faces;
+    auto cell = tria.begin();
+    auto endc = tria.end();
+    for(; cell != endc; ++cell)
+      for(unsigned int face_number = 0; face_number < GeometryInfo<dim>::faces_per_cell;
+          ++face_number)
+        if(std::fabs(cell->face(face_number)->center()(0) - left) < 1e-12)
+          cell->face(face_number)->set_all_boundary_ids(0 + offset);
+        else if(std::fabs(cell->face(face_number)->center()(0) - right) < 1e-12)
+          cell->face(face_number)->set_all_boundary_ids(1 + offset);
+
+    GridTools::collect_periodic_faces(tria, 0 + offset, 1 + offset, 0, periodic_faces);
+
+    tria.add_periodicity(periodic_faces);
+  };
+
   tria_pft.reinit(n_refinements, [&](dealii::Triangulation<dim> & tria) mutable {
     GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
+    // new: add periodicy on serial mesh
+    add_periodicy(tria);
     tria.refine_global(n_refinements);
   });
+
+  // new: add periodicy on fullydistributed mesh (!!!)
+  add_periodicy(tria_pft, 2);
 
 
   // output mesh as VTU
