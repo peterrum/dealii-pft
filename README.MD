@@ -71,7 +71,8 @@ mpirun -np 5 ./main 2 4 # dim, n_refinements
 
 ![step-0-overview](step-0/pictures/overview.png)
 
-**Note:** This use case is motivated by tests of `parallel::split::Triangulation` discussed
+**Note:** This use case is motivated by the tests of `parallel::split::Triangulation`, which 
+have been discussed
 in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 ### Step 1: Static, globally uniformly refined mesh (parallel)
