@@ -27,7 +27,7 @@ An (incomplete) list of requirements:
 
 Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
 
-### Can
+### Can (moving mesh)
 
 Thanks to: [Daniel Dengler](https://github.com/daniel-dengler)
 
@@ -53,6 +53,8 @@ In the first step, all processes color all active cells of a serial triangulatio
 For this we use simply apply `dealii::GridTools::partition_triangulation()` onto
 the serial triangulation. In a second step, the locally relevant mesh info is extracted
 and used to setup `PFT`.
+
+**Execution:**
 
 ```bash
 cd step-0
@@ -87,6 +89,15 @@ mpirun -np 5 ./main 2 8
 
 Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
+
+```bash
+cd step-3 
+mkdir build
+cd build
+cmake ..
+mpirun -np 5 ./main 2 4 8
+```
+
 ### Step 4: Partition a serial mesh 
 
 using METIS
@@ -114,5 +125,9 @@ mpirun -np 5 ./main 2 4 8
 ### Step 6: Repartition a distributed mesh
 
  using ParMETIS
+
+### Step 7: Advanced topics
+
+- two-level partitioning to enable data locality on a compute node
 
 

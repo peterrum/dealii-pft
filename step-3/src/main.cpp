@@ -155,14 +155,14 @@ extract_info(const parallel::distributed::Triangulation<dim> & tria,
 
 template<int dim>
 void
-test(int n_refinements, MPI_Comm comm)
+test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
   // create pdt
   parallel::distributed::Triangulation<dim> tria_pdt(
     comm,
     dealii::Triangulation<dim>::none,
     parallel::distributed::Triangulation<dim>::construct_multigrid_hierarchy);
-  GridGenerator::subdivided_hyper_cube(tria_pdt, 8);
+  GridGenerator::subdivided_hyper_cube(tria_pdt, n_subdivisions);
   tria_pdt.refine_global(n_refinements);
 
   // extract relevant information from pdt to be able to create pft
@@ -191,15 +191,16 @@ main(int argc, char ** argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi(argc, argv, 1);
 
-  AssertThrow(argc > 2, ExcMessage("You have not provided two command-line arguments."));
+  AssertThrow(argc > 3, ExcMessage("You have not provided two command-line arguments."));
 
-  const int dim           = atoi(argv[1]);
-  const int n_refinements = atoi(argv[2]);
+  const int dim            = atoi(argv[1]);
+  const int n_refinements  = atoi(argv[2]);
+  const int n_subdivisions = atoi(argv[3]);
 
   if(dim == 2)
-    test<2>(n_refinements, comm);
+    test<2>(n_refinements, n_subdivisions, comm);
   else if(dim == 3)
-    test<3>(n_refinements, comm);
+    test<3>(n_refinements, n_subdivisions, comm);
   else
     AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
 }
