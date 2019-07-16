@@ -36,7 +36,7 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
     parallel::fullydistributed::Utilities::copy_from_serial_triangulation(basetria, tria_pft);
 
   // actually create triangulation
-  tria_pft.reinit(construction_data, n_refinements);
+  tria_pft.reinit(construction_data);
 
   // output meshes as VTU
   GridOut grid_out;
