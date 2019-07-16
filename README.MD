@@ -21,6 +21,13 @@ An (incomplete) list of requirements:
 
 ## Concept
 
+## Additional information
+
+- A triangulation does not come alone. It is accompanied with a DoFHanlder policy. The new 
+policy works similarly as the policy of `dealii::parallel::distributed::Triangulation` except
+that the local enumeration of the coarse cells have to translated to a global enumeration before
+sending data, and vice versa if the received data should be processed.
+
 ## Examples (and nice pictures)
 
 ### NACA 0012 airfoil
