@@ -74,7 +74,7 @@ cmake ..
 mpirun -np 5 ./main 2 4 # dim, n_refinements
 ```
 
-**Results**
+**Results:**
 
 ![step-0-overview](step-0/pictures/overview.png)
 
