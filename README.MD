@@ -11,7 +11,7 @@ the coarse mesh is partitioned. Please feel free to suggest alternative names!
 
 An (incomplete) list of requirements:
 - [x] extract from `dealii::Triangulation` (serial triangulation) 
-- [x] extract from `dealii::distributed::Triangulation` (parallel triangulation) 
+- [x] extract from `dealii::parallel::distributed::Triangulation` (parallel triangulation) 
 - [x] static mesh
 - [ ] hanging nodes
 - [ ] adaptive mesh
@@ -128,7 +128,7 @@ mpirun -np 5 ./step-5 2 4 8
 
 ### Step 6: Partition a serial mesh with periodic faces
 
-The same as step-4, but with periodic faces in x-direction.
+The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
 
 ```bash
 cd step-6 

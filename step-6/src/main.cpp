@@ -71,7 +71,7 @@ main(int argc, char ** argv)
   const int n_subdivisions = atoi(argv[3]);
 
   if(dim == 1)
-    test<2>(n_refinements, n_subdivisions, comm);
+    test<1>(n_refinements, n_subdivisions, comm);
   else if(dim == 2)
     test<2>(n_refinements, n_subdivisions, comm);
   else if(dim == 3)
