@@ -31,6 +31,7 @@ test(int n_refinements, MPI_Comm comm)
   auto construction_data =
     parallel::fullydistributed::Utilities::copy_from_distributed_triangulation(tria_pdt, tria_pft);
 
+  // actually create triangulation
   tria_pft.reinit(construction_data);
 
   // output meshes as VTU
