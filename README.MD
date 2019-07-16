@@ -107,8 +107,9 @@ mpirun -np 5 ./step-3 2 4 8
 
 ### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
-Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
+**Short description:** Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
+**Execution:**
 
 ```bash
 cd step-4
@@ -147,5 +148,6 @@ TODO: using ParMETIS
 ### Step 8: Advanced topics
 
 - two-level partitioning to enable data locality on a compute node
+- timings
 
 
