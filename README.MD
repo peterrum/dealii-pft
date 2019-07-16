@@ -107,7 +107,10 @@ mpirun -np 5 ./step-3 2 4 8
 
 ### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
-**Short description:** Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
+**Short description:** Convert the fine mesh of a `PDT` from
+[step-1](https://github.com/peterrum/dealii-pft#step-1-static-globally-uniformly-refined-mesh-parallel)
+ with all multigrid levels to a `PFT`.
+
 
 **Execution:**
 
