@@ -68,10 +68,8 @@ and used to setup `PFT`.
 
 ```bash
 cd step-0
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 4 # dim, n_refinements
+make
+mpirun -np 5 ./step-0 2 4 # dim, n_refinements
 ```
 
 **Results:**
@@ -88,10 +86,8 @@ Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `
 
 ```bash
 cd step-1
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 8
+make
+mpirun -np 5 ./step-1 2 8
 ```
 
 ### Step 2: Static, globally non-uniformly refined mesh 
@@ -105,10 +101,8 @@ Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
 
 ```bash
 cd step-3 
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 4 8
+make
+mpirun -np 5 ./step-3 2 4 8
 ```
 
 ### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
@@ -117,11 +111,9 @@ Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 
 
 ```bash
-cd step-3 
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 4 8
+cd step-4
+make
+mpirun -np 5 ./step-4 2 4 8
 ```
 
 ### Step 5: Partition a serial mesh 
@@ -129,11 +121,9 @@ mpirun -np 5 ./main 2 4 8
 using METIS
 
 ```bash
-cd step-4
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 4 8
+cd step-5
+make
+mpirun -np 5 ./step-5 2 4 8
 ```
 
 ### Step 6: Partition a serial mesh with periodic faces
@@ -141,11 +131,9 @@ mpirun -np 5 ./main 2 4 8
 The same as step-4, but with periodic faces in x-direction.
 
 ```bash
-cd step-5 
-mkdir build
-cd build
-cmake ..
-mpirun -np 5 ./main 2 4 8
+cd step-6 
+make
+mpirun -np 5 ./step-6 2 4 8
 ```
 
 ### Step 7: Repartition a distributed mesh
