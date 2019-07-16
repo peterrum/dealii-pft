@@ -99,6 +99,7 @@ mkdir build
 cd build
 cmake ..
 mpirun -np 5 ./main 2 4 8
+```
 
 ### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
