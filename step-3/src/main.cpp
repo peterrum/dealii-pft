@@ -1,6 +1,6 @@
-#include <deal.II/base/geometry_info.h>
 #include <deal.II/base/mpi.h>
 #include <deal.II/distributed/tria.h>
+#include <deal.II/fe/fe_q.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/grid_tools.h>
@@ -37,6 +37,12 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 
   // actually create triangulation
   tria_pft.reinit(construction_data);
+
+  // test triangulation
+  FE_Q<dim>       fe(2);
+  DoFHandler<dim> dof_handler(tria_pft);
+  dof_handler.distribute_dofs(fe);
+  dof_handler.distribute_mg_dofs();
 
   // output meshes as VTU
   GridOut grid_out;
