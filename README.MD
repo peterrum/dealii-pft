@@ -96,7 +96,7 @@ mpirun -np 5 ./main 2 8
 
 ### Step 2: Static, globally non-uniformly refined mesh 
 
-???
+TODO
 
 ### Step 3: Static, globally uniformly refined mesh with multigrid levels (serial)
 
@@ -150,7 +150,7 @@ mpirun -np 5 ./main 2 4 8
 
 ### Step 7: Repartition a distributed mesh
 
- using ParMETIS
+TODO: using ParMETIS
 
 ### Step 8: Advanced topics
 
