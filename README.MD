@@ -40,6 +40,9 @@ Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 In the following, I give some short examples using `PFT`. The examples are ordered according to their difficulty in 
 steps.
 
+The structure of each tutorial is as follows:
+
+
 The flexibility of having a front-end and a back-end should become obvious.
 
 **Note:** The tutorials are a list of tested applications. Please feel free to 
