@@ -114,6 +114,10 @@ Convert the fine mesh of a `PDT` with all multigrid levels to a `PFT`.
 cd step-4
 make
 mpirun -np 5 ./step-4 2 4 8
+
+**Results:**
+
+![step-4-overview](step-4/pictures/overview.png)
 ```
 
 ### Step 5: Partition a serial mesh 
