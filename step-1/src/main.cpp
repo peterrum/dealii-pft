@@ -24,19 +24,14 @@ test(int n_refinements, MPI_Comm comm)
   GridGenerator::hyper_cube(tria_pdt);
   tria_pdt.refine_global(n_refinements);
 
-  // extract relevant information from pdt to be able to create pft
-  std::vector<CellData<dim>>         cells;
-  std::vector<Point<dim>>            vertices;
-  std::vector<int>                   boundary_ids;
-  std::map<int, std::pair<int, int>> coarse_lid_to_gid;
-  std::vector<Part>                  parts;
-
-  parallel::fullydistributed::Utilities::copy_from_distributed_triangulation(
-    tria_pdt, cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
-
-  // create pft
+  // create instance of pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-  tria_pft.reinit(cells, vertices, boundary_ids, coarse_lid_to_gid, parts);
+
+  // extract relevant information form serial triangulation
+  auto construction_data =
+    parallel::fullydistributed::Utilities::copy_from_distributed_triangulation(tria_pdt, tria_pft);
+
+  tria_pft.reinit(construction_data);
 
   // output meshes as VTU
   GridOut grid_out;
