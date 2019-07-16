@@ -53,7 +53,7 @@ suggests additional use cases and/or to extend the relevant classes.
 **Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
 In the first step, all processes color all active cells of a serial triangulation in the same way.
-For this we use simply apply `dealii::GridTools::partition_triangulation()` onto
+For this we simply apply `dealii::GridTools::partition_triangulation()` onto
 the serial triangulation. In a second step, the locally relevant mesh info is extracted
 and used to setup `PFT`.
 
