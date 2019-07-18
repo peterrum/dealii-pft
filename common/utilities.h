@@ -312,14 +312,9 @@ copy_from_distributed_triangulation(
 
   if(!tria_pft.do_construct_multigrid_hierarchy())
   {
-    // 1) enumerate cells of original triangulation globally uniquelly
-    FE_DGQ<dim>     fe(0);
-    DoFHandler<dim> dof_handler(tria);
-    dof_handler.distribute_dofs(fe);
-
     // 2) collect vertices of active locally owned cells
     std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
-    for(auto cell : dof_handler.cell_iterators())
+    for(auto cell : tria.cell_iterators())
       if(cell->active() && cell->is_locally_owned())
         for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
           vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
@@ -340,7 +335,7 @@ copy_from_distributed_triangulation(
     Part & part = parts[0];
 
     unsigned int cell_counter = 0;
-    for(auto cell : dof_handler.cell_iterators())
+    for(auto cell : tria.cell_iterators())
       if(cell->active() && (cell->is_locally_owned() || is_ghost(cell)))
       {
         // a) extract cell definition (with old numbering of vertices)
@@ -358,28 +353,26 @@ copy_from_distributed_triangulation(
         for(unsigned int f = 0; f < GeometryInfo<dim>::faces_per_cell; f++)
           boundary_ids.push_back(cell->face(f)->boundary_id());
 
-        // d) determine gid of this cell
-        std::vector<types::global_dof_index> indices(1);
-        cell->get_dof_indices(indices);
-
         // e) save translation for corase grid: lid -> gid
-        coarse_lid_to_gid[cell_counter] = {indices[0], cell->subdomain_id()};
+        coarse_lid_to_gid[cell_counter] = {convert_binary_to_gid<dim>(
+                                             cell->id().template to_binary<dim>()),
+                                           numbers::invalid_subdomain_id};
 
-        // f) save level information
-        if(cell->is_locally_owned())
-        {
-          // gid of local cells
-          part.local.push_back(indices[0]);
-        }
-        else
-        {
-          // gid, subdomain_id, and leve_subdomain_id of ghost cells
-          part.ghost.push_back(indices[0]);
-          part.ghost_rank.push_back(cell->subdomain_id());
-          part.ghost_rank_mg.push_back(cell->level_subdomain_id());
-        }
+        CellId::binary_type id;
+        id.fill(0);
+        id[0] = cell_counter;
+        id[1] = dim;
+        id[2] = 0;
+        id[3] = 0;
+
+        part.cells.emplace_back(id, cell->subdomain_id(), numbers::invalid_subdomain_id);
+
         cell_counter++;
       }
+
+    std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
+      return convert_binary_to_gid<dim>(a.index) < convert_binary_to_gid<dim>(b.index);
+    });
 
     // 4) enumerate locally relevant
     unsigned int vertex_counter = 0;
@@ -396,24 +389,18 @@ copy_from_distributed_triangulation(
   }
   else
   {
-    // 1) enumerate cells of original triangulation globally uniquelly
-    FE_DGQ<dim>     fe(0);
-    DoFHandler<dim> dof_handler(tria);
-    dof_handler.distribute_dofs(fe);
-    dof_handler.distribute_mg_dofs();
-
     MPI_Comm           comm    = MPI_COMM_WORLD;
     const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
 
-    for(auto cell : dof_handler.cell_iterators_on_level(0))
+    for(auto cell : tria.cell_iterators_on_level(0))
       cell->recursively_clear_user_flag();
 
-    for(unsigned int level = dof_handler.get_triangulation().n_global_levels() - 1;
+    for(unsigned int level = tria.get_triangulation().n_global_levels() - 1;
         level != numbers::invalid_unsigned_int;
         level--)
     {
       std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
-      for(auto cell : dof_handler.cell_iterators_on_level(level))
+      for(auto cell : tria.cell_iterators_on_level(level))
         if(cell->level_subdomain_id() == my_rank ||
            (cell->active() && cell->subdomain_id() == my_rank))
           for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
@@ -428,7 +415,7 @@ copy_from_distributed_triangulation(
         return false;
       };
 
-      for(auto cell : dof_handler.cell_iterators_on_level(level))
+      for(auto cell : tria.cell_iterators_on_level(level))
         if(is_ghost(cell))
           set_flag_reverse(cell);
     }
@@ -439,12 +426,8 @@ copy_from_distributed_triangulation(
     std::map<unsigned int, unsigned int> vertices_locally_relevant;
 
     unsigned int cell_counter = 0;
-    for(auto cell : dof_handler.cell_iterators_on_level(0))
+    for(auto cell : tria.cell_iterators_on_level(0))
     {
-      // a) determine gid of this cell
-      std::vector<types::global_dof_index> indices(1);
-      cell->get_mg_dof_indices(indices);
-
       if(!cell->user_flag_set())
         continue;
 
@@ -489,10 +472,10 @@ copy_from_distributed_triangulation(
     for(auto i : coarse_lid_to_gid)
       coarse_gid_to_lid[i.second.first] = i.first;
 
-    for(unsigned int level = 0; level < dof_handler.get_triangulation().n_global_levels(); level++)
+    for(unsigned int level = 0; level < tria.get_triangulation().n_global_levels(); level++)
     {
       std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
-      for(auto cell : dof_handler.cell_iterators_on_level(level))
+      for(auto cell : tria.cell_iterators_on_level(level))
         if(cell->level_subdomain_id() == my_rank ||
            (cell->active() && cell->subdomain_id() == my_rank))
           for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
@@ -511,7 +494,7 @@ copy_from_distributed_triangulation(
 
       parts.push_back(Part());
       Part & part = parts.back();
-      for(auto cell : dof_handler.cell_iterators_on_level(level))
+      for(auto cell : tria.cell_iterators_on_level(level))
       {
         if(!is_ghost(cell))
           continue;
