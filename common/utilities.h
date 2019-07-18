@@ -27,6 +27,51 @@ set_flag_reverse(CELL cell)
     set_flag_reverse(cell->parent());
 }
 
+
+template<int dim>
+unsigned int
+convert_binary_to_gid(const std::array<unsigned int, 4> binary_representation)
+{
+  const unsigned int coarse_cell_id = binary_representation[0];
+
+  const unsigned int n_child_indices = binary_representation[1] >> 2;
+
+  const unsigned int children_per_value = sizeof(CellId::binary_type::value_type) * 8 / dim;
+  unsigned int       child_level        = 0;
+  unsigned int       binary_entry       = 2;
+
+  std::vector<unsigned int> cell_indices;
+
+  // Loop until all child indices have been written
+  while(child_level < n_child_indices)
+  {
+    Assert(binary_entry < binary_representation.size(), ExcInternalError());
+
+    for(unsigned int j = 0; j < children_per_value; ++j)
+    {
+      // const unsigned int child_index =
+      //  static_cast<unsigned int>(child_indices[child_level]);
+      // Shift the child index to its position in the unsigned int and store
+      // it
+      unsigned int cell_index = (((binary_representation[binary_entry] >> (j * dim))) &
+                                 (GeometryInfo<dim>::max_children_per_cell - 1));
+      cell_indices.push_back(cell_index);
+      ++child_level;
+      if(child_level == n_child_indices)
+        break;
+    }
+    ++binary_entry;
+  }
+
+  unsigned int temp = coarse_cell_id;
+  for(auto i : cell_indices)
+  {
+    temp = temp * GeometryInfo<dim>::max_children_per_cell + i;
+  }
+
+  return temp;
+}
+
 template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 copy_from_serial_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
@@ -194,7 +239,9 @@ copy_from_serial_triangulation(const dealii::Triangulation<dim, spacedim> & tria
         boundary_ids.push_back(cell->face(f)->boundary_id());
 
       // e) save translation for corase grid: lid -> gid
-      coarse_lid_to_gid[cell_counter] = {indices[0], cell->level_subdomain_id()};
+      coarse_lid_to_gid[cell_counter] = {convert_binary_to_gid<dim>(
+                                           cell->id().template to_binary<dim>()),
+                                         cell->level_subdomain_id()};
 
       cell_counter++;
     }
@@ -212,47 +259,9 @@ copy_from_serial_triangulation(const dealii::Triangulation<dim, spacedim> & tria
       for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
         cell.vertices[v] = vertices_locally_relevant[cell.vertices[v]];
 
-
-    auto convert_binary_to_gid = [](const std::array<unsigned int, 4> binary_representation) {
-      const unsigned int coarse_cell_id = binary_representation[0];
-
-      const unsigned int n_child_indices = binary_representation[1] >> 2;
-
-      const unsigned int children_per_value = sizeof(CellId::binary_type::value_type) * 8 / dim;
-      unsigned int       child_level        = 0;
-      unsigned int       binary_entry       = 2;
-
-      std::vector<unsigned int> cell_indices;
-
-      // Loop until all child indices have been written
-      while(child_level < n_child_indices)
-      {
-        Assert(binary_entry < binary_representation.size(), ExcInternalError());
-
-        for(unsigned int j = 0; j < children_per_value; ++j)
-        {
-          // const unsigned int child_index =
-          //  static_cast<unsigned int>(child_indices[child_level]);
-          // Shift the child index to its position in the unsigned int and store
-          // it
-          unsigned int cell_index = (((binary_representation[binary_entry] >> (j * dim))) &
-                                     (GeometryInfo<dim>::max_children_per_cell - 1));
-          cell_indices.push_back(cell_index);
-          ++child_level;
-          if(child_level == n_child_indices)
-            break;
-        }
-        ++binary_entry;
-      }
-
-      unsigned int temp = coarse_cell_id;
-      for(auto i : cell_indices)
-      {
-        temp = temp * GeometryInfo<dim>::max_children_per_cell + i;
-      }
-
-      return temp;
-    };
+    std::map<int, int> coarse_gid_to_lid;
+    for(auto i : coarse_lid_to_gid)
+      coarse_gid_to_lid[i.second.first] = i.first;
 
     for(unsigned int level = 0; level < dof_handler.get_triangulation().n_global_levels(); level++)
     {
@@ -267,26 +276,18 @@ copy_from_serial_triangulation(const dealii::Triangulation<dim, spacedim> & tria
         if(!cell->user_flag_set())
           continue;
 
-        const unsigned int index = convert_binary_to_gid(cell->id().template to_binary<dim>());
+        auto id = cell->id().template to_binary<dim>();
+        id[0]   = coarse_gid_to_lid[id[0]];
 
-        if(cell->is_locally_owned_on_level())
-        {
-          // gid of local cells
-          part.local.push_back(index);
-        }
+        if(cell->active())
+          part.cells.emplace_back(id, cell->subdomain_id(), cell->level_subdomain_id());
         else
-        {
-          // gid, subdomain_id, and leve_subdomain_id of ghost cells
-          part.ghost.push_back(index);
-
-          if(cell->active())
-            part.ghost_rank.push_back(cell->subdomain_id());
-          else
-            part.ghost_rank.push_back(cell->level_subdomain_id());
-
-          part.ghost_rank_mg.push_back(cell->level_subdomain_id());
-        }
+          part.cells.emplace_back(id, numbers::invalid_subdomain_id, cell->level_subdomain_id());
       }
+
+      std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
+        return convert_binary_to_gid<dim>(a.index) < convert_binary_to_gid<dim>(b.index);
+      });
     }
   }
 
@@ -401,6 +402,39 @@ copy_from_distributed_triangulation(
     dof_handler.distribute_dofs(fe);
     dof_handler.distribute_mg_dofs();
 
+    MPI_Comm           comm    = MPI_COMM_WORLD;
+    const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
+
+    for(auto cell : dof_handler.cell_iterators_on_level(0))
+      cell->recursively_clear_user_flag();
+
+    for(unsigned int level = dof_handler.get_triangulation().n_global_levels() - 1;
+        level != numbers::invalid_unsigned_int;
+        level--)
+    {
+      std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
+      for(auto cell : dof_handler.cell_iterators_on_level(level))
+        if(cell->level_subdomain_id() == my_rank ||
+           (cell->active() && cell->subdomain_id() == my_rank))
+          for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+            vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+
+      // helper function to determine if cell is locally relevant
+      auto is_ghost = [&](auto & cell) {
+        for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+          if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
+             vertices_owned_by_loclly_owned_cells.end())
+            return true;
+        return false;
+      };
+
+      for(auto cell : dof_handler.cell_iterators_on_level(level))
+        if(is_ghost(cell))
+          set_flag_reverse(cell);
+    }
+
+
+
     // 2) collect vertices of cells on level 0
     std::map<unsigned int, unsigned int> vertices_locally_relevant;
 
@@ -411,7 +445,7 @@ copy_from_distributed_triangulation(
       std::vector<types::global_dof_index> indices(1);
       cell->get_mg_dof_indices(indices);
 
-      if(indices[0] == numbers::invalid_dof_index)
+      if(!cell->user_flag_set())
         continue;
 
       // b) extract cell definition (with old numbering of vertices)
@@ -430,7 +464,9 @@ copy_from_distributed_triangulation(
         boundary_ids.push_back(cell->face(f)->boundary_id());
 
       // e) save translation for corase grid: lid -> gid
-      coarse_lid_to_gid[cell_counter] = {indices[0], cell->level_subdomain_id()};
+      coarse_lid_to_gid[cell_counter] = {convert_binary_to_gid<dim>(
+                                           cell->id().template to_binary<dim>()),
+                                         cell->level_subdomain_id()};
 
       cell_counter++;
     }
@@ -449,80 +485,49 @@ copy_from_distributed_triangulation(
         cell.vertices[v] = vertices_locally_relevant[cell.vertices[v]];
 
 
-    auto convert_binary_to_gid = [](const std::array<unsigned int, 4> binary_representation) {
-      const unsigned int coarse_cell_id = binary_representation[0];
-
-      const unsigned int n_child_indices = binary_representation[1] >> 2;
-
-      const unsigned int children_per_value = sizeof(CellId::binary_type::value_type) * 8 / dim;
-      unsigned int       child_level        = 0;
-      unsigned int       binary_entry       = 2;
-
-      std::vector<unsigned int> cell_indices;
-
-      // Loop until all child indices have been written
-      while(child_level < n_child_indices)
-      {
-        Assert(binary_entry < binary_representation.size(), ExcInternalError());
-
-        for(unsigned int j = 0; j < children_per_value; ++j)
-        {
-          // const unsigned int child_index =
-          //  static_cast<unsigned int>(child_indices[child_level]);
-          // Shift the child index to its position in the unsigned int and store
-          // it
-          unsigned int cell_index = (((binary_representation[binary_entry] >> (j * dim))) &
-                                     (GeometryInfo<dim>::max_children_per_cell - 1));
-          cell_indices.push_back(cell_index);
-          ++child_level;
-          if(child_level == n_child_indices)
-            break;
-        }
-        ++binary_entry;
-      }
-
-      unsigned int temp = coarse_cell_id;
-      for(auto i : cell_indices)
-      {
-        temp = temp * GeometryInfo<dim>::max_children_per_cell + i;
-      }
-
-      return temp;
-    };
+    std::map<int, int> coarse_gid_to_lid;
+    for(auto i : coarse_lid_to_gid)
+      coarse_gid_to_lid[i.second.first] = i.first;
 
     for(unsigned int level = 0; level < dof_handler.get_triangulation().n_global_levels(); level++)
     {
+      std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
+      for(auto cell : dof_handler.cell_iterators_on_level(level))
+        if(cell->level_subdomain_id() == my_rank ||
+           (cell->active() && cell->subdomain_id() == my_rank))
+          for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+            vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+
+      // helper function to determine if cell is locally relevant
+      auto is_ghost = [&](auto & cell) {
+        for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+          if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
+             vertices_owned_by_loclly_owned_cells.end())
+            return true;
+        return false;
+      };
+
+
+
       parts.push_back(Part());
       Part & part = parts.back();
       for(auto cell : dof_handler.cell_iterators_on_level(level))
       {
-        // a) determine gid of this cell
-        std::vector<types::global_dof_index> indices(1);
-        cell->get_mg_dof_indices(indices);
-
-        if(indices[0] == numbers::invalid_dof_index)
+        if(!is_ghost(cell))
           continue;
 
-        const unsigned int index = convert_binary_to_gid(cell->id().template to_binary<dim>());
+        auto id = cell->id().template to_binary<dim>();
+        id[0]   = coarse_gid_to_lid[id[0]];
 
-        if(cell->is_locally_owned_on_level())
-        {
-          // gid of local cells
-          part.local.push_back(index);
-        }
+        if(cell->active())
+          part.cells.emplace_back(id, cell->subdomain_id(), cell->level_subdomain_id());
         else
-        {
-          // gid, subdomain_id, and leve_subdomain_id of ghost cells
-          part.ghost.push_back(index);
-
-          if(cell->active())
-            part.ghost_rank.push_back(cell->subdomain_id());
-          else
-            part.ghost_rank.push_back(cell->level_subdomain_id());
-
-          part.ghost_rank_mg.push_back(cell->level_subdomain_id());
-        }
+          part.cells.emplace_back(id, numbers::invalid_subdomain_id, cell->level_subdomain_id());
       }
+
+      std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
+        return convert_binary_to_gid<dim>(a.index) < convert_binary_to_gid<dim>(b.index);
+      });
     }
   }
 
