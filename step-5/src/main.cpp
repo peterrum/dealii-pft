@@ -7,23 +7,30 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 
+#include "../../common/utilities.h"
+
 const MPI_Comm comm = MPI_COMM_WORLD;
 
 using namespace dealii;
 
 
-template<int dim>
+template<int dim, int spacedim = dim>
 void
 test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
   // create pft
-  parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
+  parallel::fullydistributed::Triangulation<dim, spacedim> tria_pft(comm);
 
-  tria_pft.reinit(n_refinements, [&](dealii::Triangulation<dim> & tria) mutable {
-    GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
-    tria.refine_global(n_refinements);
-  });
+  // create serial triangulation and extract relevant information
+  auto construction_data =
+    parallel::fullydistributed::Utilities::create_and_partition<dim, spacedim>(
+      [&](dealii::Triangulation<dim, spacedim> & tria) mutable {
+        GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
+        tria.refine_global(n_refinements);
+      });
 
+  // actually create triangulation
+  tria_pft.reinit(construction_data);
 
   // output mesh as VTU
   GridOut grid_out;

@@ -7,6 +7,8 @@
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/fe/fe_dgq.h>
 
+#include <functional>
+
 using namespace dealii;
 
 
@@ -75,10 +77,9 @@ convert_binary_to_gid(const std::array<unsigned int, 4> binary_representation)
 
 template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
-copy_from_triangulation(
-  const dealii::Triangulation<dim, spacedim> & tria,
-  const Triangulation<dim, spacedim> &                        tria_pft,
-  const MPI_Comm                                              comm = MPI_COMM_WORLD)
+copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
+                        const Triangulation<dim, spacedim> &         tria_pft,
+                        const MPI_Comm                               comm = MPI_COMM_WORLD)
 {
   const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
 
@@ -182,9 +183,9 @@ copy_from_triangulation(
            (cell->active() && cell->subdomain_id() == my_rank))
           for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
             vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
-        
+
       if(level > 0)
-        for(auto cell : tria.cell_iterators_on_level(level-1))
+        for(auto cell : tria.cell_iterators_on_level(level - 1))
           if(cell->level_subdomain_id() == my_rank ||
              (cell->active() && cell->subdomain_id() == my_rank))
             for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
@@ -264,9 +265,9 @@ copy_from_triangulation(
            (cell->active() && cell->subdomain_id() == my_rank))
           for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
             vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
-        
+
       if(level > 0)
-        for(auto cell : tria.cell_iterators_on_level(level-1))
+        for(auto cell : tria.cell_iterators_on_level(level - 1))
           if(cell->level_subdomain_id() == my_rank ||
              (cell->active() && cell->subdomain_id() == my_rank))
             for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
@@ -287,7 +288,7 @@ copy_from_triangulation(
       Part & part = parts.back();
       for(auto cell : tria.cell_iterators_on_level(level))
       {
-        if(!(cell->user_flag_set() ))
+        if(!(cell->user_flag_set()))
           continue;
 
         auto id = cell->id().template to_binary<dim>();
@@ -295,10 +296,12 @@ copy_from_triangulation(
 
         if(cell->active() && is_ghost(cell))
           part.cells.emplace_back(id, cell->subdomain_id(), cell->level_subdomain_id());
-        else if (is_ghost(cell))
+        else if(is_ghost(cell))
           part.cells.emplace_back(id, numbers::artificial_subdomain_id, cell->level_subdomain_id());
         else
-          part.cells.emplace_back(id, numbers::artificial_subdomain_id, numbers::artificial_subdomain_id);
+          part.cells.emplace_back(id,
+                                  numbers::artificial_subdomain_id,
+                                  numbers::artificial_subdomain_id);
       }
 
       std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
@@ -308,6 +311,22 @@ copy_from_triangulation(
   }
 
   return cd;
+}
+
+
+template<int dim, int spacedim = dim>
+ConstructionData<dim, spacedim>
+create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)> func1,
+                     AdditionalData additional_data = AdditionalData())
+{
+  (void)func1;
+  (void)additional_data;
+
+  ConstructionData<dim, spacedim> temp;
+  
+  AssertThrow(false, ExcNotImplemented());
+
+  return temp;
 }
 
 } // namespace Utilities
