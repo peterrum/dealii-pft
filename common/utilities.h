@@ -299,7 +299,7 @@ copy_from_serial_triangulation(const dealii::Triangulation<dim, spacedim> & tria
 template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 copy_from_distributed_triangulation(
-  const parallel::distributed::Triangulation<dim, spacedim> & tria,
+  const dealii::Triangulation<dim, spacedim> & tria,
   const Triangulation<dim, spacedim> &                        tria_pft,
   const MPI_Comm                                              comm = MPI_COMM_WORLD)
 {
@@ -496,16 +496,18 @@ copy_from_distributed_triangulation(
       Part & part = parts.back();
       for(auto cell : tria.cell_iterators_on_level(level))
       {
-        if(!is_ghost(cell))
+        if(!(cell->user_flag_set() ))
           continue;
 
         auto id = cell->id().template to_binary<dim>();
         id[0]   = coarse_gid_to_lid[id[0]];
 
-        if(cell->active())
+        if(cell->active() && is_ghost(cell))
           part.cells.emplace_back(id, cell->subdomain_id(), cell->level_subdomain_id());
+        else if (is_ghost(cell))
+          part.cells.emplace_back(id, numbers::artificial_subdomain_id, cell->level_subdomain_id());
         else
-          part.cells.emplace_back(id, numbers::invalid_subdomain_id, cell->level_subdomain_id());
+          part.cells.emplace_back(id, numbers::artificial_subdomain_id, numbers::artificial_subdomain_id);
       }
 
       std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
