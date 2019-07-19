@@ -300,8 +300,11 @@ template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 copy_from_distributed_triangulation(
   const parallel::distributed::Triangulation<dim, spacedim> & tria,
-  const Triangulation<dim, spacedim> &                        tria_pft)
+  const Triangulation<dim, spacedim> &                        tria_pft,
+  const MPI_Comm                                              comm = MPI_COMM_WORLD)
 {
+  const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
+
   ConstructionData<dim, spacedim> cd;
 
   auto & cells             = cd.cells;
@@ -315,12 +318,12 @@ copy_from_distributed_triangulation(
     // 2) collect vertices of active locally owned cells
     std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
     for(auto cell : tria.cell_iterators())
-      if(cell->active() && cell->is_locally_owned())
+      if(cell->active() && cell->subdomain_id() == my_rank)
         for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
           vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
 
     // helper function to determine if cell is locally relevant
-    auto is_ghost = [&](auto & cell) {
+    auto is_locally_relevant = [&](auto & cell) {
       for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
         if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
            vertices_owned_by_loclly_owned_cells.end())
@@ -336,7 +339,7 @@ copy_from_distributed_triangulation(
 
     unsigned int cell_counter = 0;
     for(auto cell : tria.cell_iterators())
-      if(cell->active() && (cell->is_locally_owned() || is_ghost(cell)))
+      if(cell->active() && is_locally_relevant(cell))
       {
         // a) extract cell definition (with old numbering of vertices)
         CellData<dim> cell_data;
@@ -389,9 +392,6 @@ copy_from_distributed_triangulation(
   }
   else
   {
-    MPI_Comm           comm    = MPI_COMM_WORLD;
-    const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
-
     for(auto cell : tria.cell_iterators_on_level(0))
       cell->recursively_clear_user_flag();
 
