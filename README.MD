@@ -13,7 +13,7 @@ An (incomplete) list of requirements:
 - [x] extract from `dealii::Triangulation` (serial triangulation) 
 - [x] extract from `dealii::parallel::distributed::Triangulation` (parallel triangulation) 
 - [x] static mesh
-- [ ] hanging nodes
+- [x] hanging nodes
 - [ ] adaptive mesh
 - [x] geometric multigrid
 - [x] periodicity
