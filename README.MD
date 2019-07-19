@@ -40,6 +40,10 @@ Thanks to: [Daniel Dengler](https://github.com/daniel-dengler)
 
 ### Lung
 
+Deformed mesh of a lung with six generations with different refinement levels:
+
+![step-4-overview](figures/lung_generations.png)
+
 Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
 ## Tutorials
