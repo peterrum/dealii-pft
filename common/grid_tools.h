@@ -173,17 +173,6 @@ shared_partition_triangulation(dealii::Triangulation<dim, spacedim> & tria,
   // Step 3: create dual graph with connectivity on vertices
   partitioner->mesh_to_dual(eptr, eind, 1, graph_vertex);
 
-  // Step 4a: perform partitioning on finest level
-  // create dual graph with connectivity on faces
-  Graph graph_face;
-  partitioner->mesh_to_dual(eptr, eind, GeometryInfo<dim>::vertices_per_face, graph_face);
-  // perform pre-partitioning such that groups are kept together
-  // partitioner->partition(graph_face, size_node, false);
-  // partitioner->partition(graph_face, size_groups, true);
-  // use pre-partitioning result as weight for actual
-  // partitioning
-  partitioner->partition(graph_face, size_all, false);
-
   auto compress = [](const Graph & graph_in) {
     Graph graph_out;
 
@@ -222,16 +211,17 @@ shared_partition_triangulation(dealii::Triangulation<dim, spacedim> & tria,
     return graph_out;
   };
 
+  // Step 4a: perform partitioning on finest level
+  // create dual graph with connectivity on faces
+  Graph graph_face;
+  partitioner->mesh_to_dual(eptr, eind, GeometryInfo<dim>::vertices_per_face, graph_face);
+  partitioner->partition(graph_face, size_all, false);
+
   auto g1 = compress(graph_face);
   partitioner->partition(g1, size_groups, false);
-  // std::cout << "G-";
-  // g1.print(std::cout);
 
   auto g2 = compress(g1);
   partitioner->partition(g2, size_node, false);
-  // std::cout << "N-";
-  // g2.print(std::cout);
-
 
   // re-numerate ranks
   std::map<std::pair<unsigned int, unsigned int>, std::set<unsigned int>> sets;
@@ -246,11 +236,6 @@ shared_partition_triangulation(dealii::Triangulation<dim, spacedim> & tria,
   for(auto & set : sets)
     for(auto s : set.second)
       re_order[s] = k++;
-
-  // printf("OO:  ");
-  // for (auto i : re_order)
-  //  printf("%3d  ", i);
-  // printf("\n");
 
   for(unsigned int i = 0; i < graph_face.parts.size(); i++)
     graph_face.parts[i] = re_order[graph_face.parts[i]];

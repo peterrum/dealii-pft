@@ -399,7 +399,7 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
                      const Triangulation<dim, spacedim> &                        tria_pft,
                      GridTools::AdditionalData additional_data = GridTools::AdditionalData())
 {
-  int rank_all, size_all;
+  int rank_all, size_all, size_shared, rank_shared, size_node, size_groups;
 
   // comm with all ranks sharing the triangulation
   MPI_Comm comm_all = tria_pft.get_communicator();
@@ -426,12 +426,9 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
     AssertThrow(false, ExcMessage("No partitioner group type has been selected."));
   }
 
-  int size_shared;
-  int rank_shared;
   MPI_Comm_size(comm_shared, &size_shared);
   MPI_Comm_rank(comm_shared, &rank_shared);
 
-  int size_groups;
   {
     MPI_Comm comm_group;
     int      color = (rank_shared == 0);
@@ -439,7 +436,6 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
     MPI_Comm_size(comm_group, &size_groups);
   }
 
-  int size_node;
   {
     int      rank_node;
     MPI_Comm comm_node;
