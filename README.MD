@@ -18,7 +18,7 @@ An (incomplete) list of requirements:
 - [x] geometric multigrid
 - [x] periodicity
 - [x] 1D/2D/3D
-- [x] IO
+- [x] I/O from/to `*.pft`-files
 
 ## Concept
 
