@@ -12,6 +12,10 @@
 
 #include "grid_tools.h"
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <fstream>
+
 using namespace dealii;
 
 
@@ -522,6 +526,33 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
     return construction_data;
   }
 }
+
+template<int dim, int spacedim = dim>
+void
+serialize(ConstructionData<dim, spacedim> & data, std::string file_name, MPI_Comm comm)
+{
+  file_name += "." + std::to_string(dealii::Utilities::MPI::this_mpi_process(comm)) + ".pft";
+
+  std::ofstream                 ofs(file_name);
+  boost::archive::text_oarchive oa(ofs);
+  oa << data;
+}
+
+template<int dim, int spacedim = dim>
+ConstructionData<dim, spacedim>
+deserialize(std::string file_name, MPI_Comm comm)
+{
+  ConstructionData<dim, spacedim> data;
+
+  file_name += "." + std::to_string(dealii::Utilities::MPI::this_mpi_process(comm)) + ".pft";
+
+  std::ifstream                 ifs(file_name);
+  boost::archive::text_iarchive ia(ifs);
+  ia >> data;
+
+  return data;
+}
+
 
 } // namespace Utilities
 } // namespace fullydistributed

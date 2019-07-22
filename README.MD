@@ -148,11 +148,17 @@ make
 mpirun -np 5 ./step-6 2 4 8
 ```
 
-### Step 7: Repartition a distributed mesh
+### Step 7: Partition a serial mesh with periodic faces
+
+The same as [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial), but with a (de)serialization
+in between.
+
+
+### Step 8: Repartition a distributed mesh
 
 TODO: using ParMETIS
 
-### Step 8: Advanced topics
+### Step 9: Advanced topics
 
 - two-level partitioning to enable data locality on a compute node
 - timings
