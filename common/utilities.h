@@ -414,15 +414,9 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
   std::vector<int> ranks_shared(size_shared);
   MPI_Allgather(&rank_all, 1, MPI_INT, &ranks_shared[0], 1, MPI_INT, comm_shared);
 
-  int size_coarse;
-  MPI_Comm_size(tria_pft.get_coarse_communicator(), &size_coarse);
-  MPI_Bcast(&size_coarse, 1, MPI_INT, 0, comm_all);
-  AssertThrow(size_coarse <= size_all, ExcMessage("No partitioner group type has been selected."));
-
   additional_data.size_all    = size_all;
   additional_data.size_groups = size_groups;
   additional_data.size_node   = size_node;
-  additional_data.size_coarse = size_coarse;
 
   if(rank_shared == 0)
   {
