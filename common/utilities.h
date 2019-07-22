@@ -6,8 +6,11 @@
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/fe/fe_dgq.h>
+#include <deal.II/grid/grid_tools.h>
 
 #include <functional>
+
+#include "grid_tools.h"
 
 using namespace dealii;
 
@@ -79,9 +82,38 @@ template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
                         const Triangulation<dim, spacedim> &         tria_pft,
-                        const MPI_Comm                               comm = MPI_COMM_WORLD)
+                        const unsigned int my_rank_in = numbers::invalid_unsigned_int)
 {
-  const unsigned int my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
+  const MPI_Comm comm = tria_pft.get_communicator();
+
+  if(auto tria_pdt =
+       dynamic_cast<const parallel::distributed::Triangulation<dim, spacedim> *>(&tria))
+    AssertThrow(comm != tria_pdt->get_communicator(),
+                ExcMessage("MPI communicators do not match."));
+
+  unsigned int my_rank = my_rank_in;
+  AssertThrow(my_rank == numbers::invalid_unsigned_int ||
+                my_rank < dealii::Utilities::MPI::n_mpi_processes(comm),
+              ExcMessage("Rank has to be smaller than available processes."));
+
+  if(auto tria_pdt =
+       dynamic_cast<const parallel::distributed::Triangulation<dim, spacedim> *>(&tria))
+  {
+    if(my_rank == numbers::invalid_unsigned_int ||
+       my_rank == dealii::Utilities::MPI::this_mpi_process(comm))
+      my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
+    else
+      AssertThrow(false, ExcMessage("PDT: y_rank has to equal global rank."));
+  }
+  else if(auto tria_serial = dynamic_cast<const dealii::Triangulation<dim, spacedim> *>(&tria))
+  {
+    if(my_rank == numbers::invalid_unsigned_int)
+      my_rank = dealii::Utilities::MPI::this_mpi_process(comm);
+  }
+  else
+  {
+    AssertThrow(false, ExcMessage("This type of triangulation is not supported!"));
+  }
 
   ConstructionData<dim, spacedim> cd;
 
@@ -317,16 +349,111 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
 template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)> func1,
-                     AdditionalData additional_data = AdditionalData())
+                     const Triangulation<dim, spacedim> &                        tria_pft,
+                     GridTools::AdditionalData additional_data = GridTools::AdditionalData())
 {
   (void)func1;
   (void)additional_data;
 
-  ConstructionData<dim, spacedim> temp;
-  
-  AssertThrow(false, ExcNotImplemented());
+  int rank_all, size_all;
 
-  return temp;
+  // comm with all ranks sharing the triangulation
+  MPI_Comm comm_all = tria_pft.get_communicator();
+  MPI_Comm_rank(comm_all, &rank_all);
+  MPI_Comm_size(comm_all, &size_all);
+
+  // setup shared communicator
+  MPI_Comm comm_shared;
+  if(additional_data.partition_group == GridTools::PartitioningGroup::shared)
+  {
+    MPI_Comm_split_type(comm_all, MPI_COMM_TYPE_SHARED, rank_all, MPI_INFO_NULL, &comm_shared);
+  }
+  else if(additional_data.partition_group == GridTools::PartitioningGroup::fixed ||
+          additional_data.partition_group == GridTools::PartitioningGroup::single)
+  {
+    int color =
+      rank_all / (additional_data.partition_group == GridTools::PartitioningGroup::single ?
+                    1 :
+                    additional_data.partition_group_size);
+    MPI_Comm_split(comm_all, color, rank_all, &comm_shared);
+  }
+  else
+  {
+    AssertThrow(false, ExcMessage("No partitioner group type has been selected."));
+  }
+
+  int size_shared;
+  int rank_shared;
+  MPI_Comm_size(comm_shared, &size_shared);
+  MPI_Comm_rank(comm_shared, &rank_shared);
+
+  int size_groups;
+  {
+    MPI_Comm comm_group;
+    int      color = (rank_shared == 0);
+    MPI_Comm_split(comm_all, color, rank_all, &comm_group);
+    MPI_Comm_size(comm_group, &size_groups);
+  }
+
+  int size_node;
+  {
+    int      rank_node;
+    MPI_Comm comm_node;
+    MPI_Comm_split_type(comm_all, MPI_COMM_TYPE_SHARED, rank_all, MPI_INFO_NULL, &comm_node);
+    MPI_Comm_rank(comm_node, &rank_node);
+
+    int      color = (rank_node == 0);
+    MPI_Comm comm_node_root;
+    MPI_Comm_split(comm_all, color, rank_all, &comm_node_root);
+    MPI_Comm_size(comm_node_root, &size_node);
+
+    MPI_Bcast(&size_node, 1, MPI_INT, 0, comm_all);
+  }
+
+  // get global ranks of processes in shared communicator
+  std::vector<int> ranks_shared(size_shared);
+  MPI_Allgather(&rank_all, 1, MPI_INT, &ranks_shared[0], 1, MPI_INT, comm_shared);
+
+  int size_coarse;
+  MPI_Comm_size(tria_pft.get_coarse_communicator(), &size_coarse);
+  MPI_Bcast(&size_coarse, 1, MPI_INT, 0, comm_all);
+  AssertThrow(size_coarse <= size_all, ExcMessage("No partitioner group type has been selected."));
+
+  additional_data.size_all    = size_all;
+  additional_data.size_groups = size_groups;
+  additional_data.size_node   = size_node;
+  additional_data.size_coarse = size_coarse;
+
+  if(rank_shared == 0)
+  {
+    // Step 1a: create sequential triangulation
+    dealii::Triangulation<dim> tria;
+    func1(tria);
+
+    // Step 1b: partition fine grid
+    GridTools::shared_partition_triangulation(tria, additional_data);
+
+
+    // Step 1c: project the fine grid partitions down onto the coarser grid levels
+    GridTools::partition_multigrid_levels(tria);
+
+    for(int rank_shared = 1; rank_shared < size_shared; rank_shared++)
+    {
+      auto construction_data = copy_from_triangulation(tria, tria_pft, ranks_shared[rank_shared]);
+      // pack
+      // send construction_data
+    }
+
+    return copy_from_triangulation(tria, tria_pft, ranks_shared[0]);
+  }
+  else
+  {
+    ConstructionData<dim, spacedim> construction_data;
+    // recv construction_data
+    // unpack
+
+    return construction_data;
+  }
 }
 
 } // namespace Utilities

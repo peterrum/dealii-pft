@@ -27,7 +27,8 @@ test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
       [&](dealii::Triangulation<dim, spacedim> & tria) mutable {
         GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
         tria.refine_global(n_refinements);
-      });
+      },
+      tria_pft);
 
   // actually create triangulation
   tria_pft.reinit(construction_data);
