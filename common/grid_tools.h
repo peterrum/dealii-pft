@@ -257,6 +257,10 @@ shared_partition_triangulation(dealii::Triangulation<dim, spacedim> & tria,
 
   // save partitioning
   graph_vertex.parts = graph_face.parts;
+
+  auto ptr = graph_vertex.parts.begin();
+  for(auto cell : tria.active_cell_iterators())
+    cell->set_subdomain_id(*ptr++);
 }
 
 } // namespace GridTools

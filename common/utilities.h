@@ -15,6 +15,54 @@
 using namespace dealii;
 
 
+
+namespace boost
+{
+namespace serialization
+{
+template<class Archive, int spacedim>
+void
+serialize(Archive & ar, dealii::CellData<spacedim> & g, const unsigned int /*version*/)
+{
+  ar & g.vertices;
+  ar & g.material_id;
+  ar & g.boundary_id;
+  ar & g.manifold_id;
+}
+
+template<class Archive>
+void
+serialize(Archive & ar, dealii::Part_ & g, const unsigned int /*version*/)
+{
+  ar & g.index;
+  ar & g.subdomain_id;
+  ar & g.level_subdomain_id;
+}
+
+template<class Archive>
+void
+serialize(Archive & ar, dealii::Part & g, const unsigned int /*version*/)
+{
+  ar & g.cells;
+}
+
+template<class Archive, int dim, int spacedim>
+void
+serialize(Archive &                                                             ar,
+          dealii::parallel::fullydistributed::ConstructionData<dim, spacedim> & g,
+          const unsigned int /*version*/)
+{
+  ar & g.cells;
+  ar & g.vertices;
+  ar & g.boundary_ids;
+  ar & g.coarse_lid_to_gid;
+  ar & g.parts;
+}
+
+} // namespace serialization
+} // namespace boost
+
+
 namespace dealii
 {
 namespace parallel
@@ -345,16 +393,12 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
   return cd;
 }
 
-
 template<int dim, int spacedim = dim>
 ConstructionData<dim, spacedim>
 create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)> func1,
                      const Triangulation<dim, spacedim> &                        tria_pft,
                      GridTools::AdditionalData additional_data = GridTools::AdditionalData())
 {
-  (void)func1;
-  (void)additional_data;
-
   int rank_all, size_all;
 
   // comm with all ranks sharing the triangulation
@@ -421,30 +465,63 @@ create_and_partition(std::function<void(dealii::Triangulation<dim, spacedim> &)>
   if(rank_shared == 0)
   {
     // Step 1a: create sequential triangulation
-    dealii::Triangulation<dim> tria;
+    dealii::Triangulation<dim> tria(
+      tria_pft.do_construct_multigrid_hierarchy() ?
+        dealii::Triangulation<dim, spacedim>::none :
+        dealii::Triangulation<dim, spacedim>::limit_level_difference_at_vertices);
     func1(tria);
 
     // Step 1b: partition fine grid
     GridTools::shared_partition_triangulation(tria, additional_data);
 
-
-    // Step 1c: project the fine grid partitions down onto the coarser grid levels
-    GridTools::partition_multigrid_levels(tria);
+    if(tria_pft.do_construct_multigrid_hierarchy())
+    {
+      // Step 1c: project the fine grid partitions down onto the coarser grid levels
+      GridTools::partition_multigrid_levels(tria);
+    }
 
     for(int rank_shared = 1; rank_shared < size_shared; rank_shared++)
     {
+      // create construction data for other ranks
       auto construction_data = copy_from_triangulation(tria, tria_pft, ranks_shared[rank_shared]);
       // pack
+      std::string                                       serial_str;
+      boost::iostreams::back_insert_device<std::string> inserter(serial_str);
+      boost::iostreams::stream<boost::iostreams::back_insert_device<std::string>> s(inserter);
+      boost::archive::binary_oarchive                                             oa(s);
+      oa << construction_data;
+      s.flush();
+
       // send construction_data
+      MPI_Send(serial_str.c_str(), serial_str.size(), MPI_CHAR, rank_shared, 0, comm_shared);
     }
+
+    MPI_Barrier(comm_all);
 
     return copy_from_triangulation(tria, tria_pft, ranks_shared[0]);
   }
   else
   {
     ConstructionData<dim, spacedim> construction_data;
+
     // recv construction_data
+    MPI_Status status;
+    MPI_Probe(0, 0, comm_shared, &status);
+    int l;
+    MPI_Get_count(&status, MPI_CHAR, &l);
+    char * buf = new char[l];
+    MPI_Recv(buf, l, MPI_CHAR, 0, 0, comm_shared, &status);
+    std::string serial_str(buf, l);
+    delete[] buf;
+
     // unpack
+    boost::iostreams::basic_array_source<char> device(serial_str.data(), serial_str.size());
+    boost::iostreams::stream<boost::iostreams::basic_array_source<char>> s(device);
+    boost::archive::binary_iarchive                                      ia(s);
+
+    ia >> construction_data;
+
+    MPI_Barrier(comm_all);
 
     return construction_data;
   }

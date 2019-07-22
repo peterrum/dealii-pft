@@ -19,7 +19,11 @@ void
 test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
   // create pft
-  parallel::fullydistributed::Triangulation<dim, spacedim> tria_pft(comm);
+  parallel::fullydistributed::Triangulation<dim, spacedim> tria_pft(
+    comm, parallel::fullydistributed::Triangulation<dim>::construct_multigrid_hierarchy);
+
+  GridTools::AdditionalData additional_data;
+  additional_data.partition_group = GridTools::PartitioningGroup::shared;
 
   // create serial triangulation and extract relevant information
   auto construction_data =
@@ -28,7 +32,8 @@ test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
         GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
         tria.refine_global(n_refinements);
       },
-      tria_pft);
+      tria_pft,
+      additional_data);
 
   // actually create triangulation
   tria_pft.reinit(construction_data);
