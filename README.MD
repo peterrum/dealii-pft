@@ -106,15 +106,11 @@ a serial mesh is converted into `pft`.
 However, in between the construction data is written to files with the help of
 `boost`:
 ```cpp
-template<int dim, int spacedim = dim>
-void
-serialize(ConstructionData<dim, spacedim> & data, std::string file_name, MPI_Comm comm);
+parallel::fullydistributed::Utilities::serialize(construction_data, file_name, comm);
 ```
  and read from right away from them:
 ```cpp
-template<int dim, int spacedim = dim>
-ConstructionData<dim, spacedim>
-deserialize(std::string file_name, MPI_Comm comm);
+auto construction_data = parallel::fullydistributed::Utilities::deserialize<dim>(file_name, comm);
 ```
 
 
