@@ -62,7 +62,7 @@ suggests additional use cases and/or to extend the relevant classes.
 
 ### Step 0: Static, globally uniformly refined mesh (serial)
 
-**Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
+**Short description:** Convert a colored (partitioned) serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
 We create a serial triangulation `dealii::Triangulation`. We partition the active cells
 by simply applying `dealii::GridTools::partition_triangulation()` onto it. 
