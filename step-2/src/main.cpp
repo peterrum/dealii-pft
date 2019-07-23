@@ -3,6 +3,7 @@
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/manifold_lib.h>
 
 #include "../../common/utilities.h"
 
@@ -48,6 +49,8 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
   // create instance of pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(
     comm, parallel::fullydistributed::Triangulation<dim>::construct_multigrid_hierarchy);
+  
+  tria_pft.set_manifold(0, SphericalManifold<dim>(center)); 
 
   // extract relevant information form pdt
   auto construction_data =
@@ -64,8 +67,8 @@ test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 
   // output meshes as VTU
   GridOut grid_out;
-  grid_out.write_mesh_per_processor_as_vtu(tria_pdt, "trid_pdt", true, true);
-  grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", true, true);
+  grid_out.write_mesh_per_processor_as_vtu(tria_pdt, "trid_pdt", false, true);
+  grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", false, true);
 }
 
 
