@@ -175,29 +175,33 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
   auto & coarse_lid_to_gid = cd.coarse_lid_to_gid;
   auto & parts             = cd.parts;
 
+  auto add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells =
+    [](auto & cell, auto & vertices_owned_by_loclly_owned_cells) {
+      for(unsigned int i = 0; i < GeometryInfo<dim>::faces_per_cell; i++)
+        if(cell->has_periodic_neighbor(i))
+        {
+          auto face_t = cell->face(i);
+          auto face_n = cell->periodic_neighbor(i)->face(cell->periodic_neighbor_face_no(i));
+          for(unsigned int j = 0; j < GeometryInfo<dim>::vertices_per_face; j++)
+          {
+            vertices_owned_by_loclly_owned_cells.insert(face_t->vertex_index(j));
+            vertices_owned_by_loclly_owned_cells.insert(face_n->vertex_index(j));
+          }
+        }
+
+
+      for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+        vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+    };
+
   if(!tria_pft.do_construct_multigrid_hierarchy())
   {
     // 2) collect vertices of active locally owned cells
     std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
     for(auto cell : tria.cell_iterators())
       if(cell->active() && cell->subdomain_id() == my_rank)
-      {
-        for(unsigned int i = 0; i < GeometryInfo<dim>::faces_per_cell; i++)
-          if(cell->has_periodic_neighbor(i))
-          {
-            auto face_t = cell->face(i);
-            auto face_n = cell->periodic_neighbor(i)->face(cell->periodic_neighbor_face_no(i));
-            for(unsigned int j = 0; j < GeometryInfo<dim>::vertices_per_face; j++)
-            {
-              vertices_owned_by_loclly_owned_cells.insert(face_t->vertex_index(j));
-              vertices_owned_by_loclly_owned_cells.insert(face_n->vertex_index(j));
-            }
-          }
-
-
-        for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-          vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
-      }
+        add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+          cell, vertices_owned_by_loclly_owned_cells);
 
     // helper function to determine if cell is locally relevant
     auto is_locally_relevant = [&](auto & cell) {
@@ -280,15 +284,15 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
       for(auto cell : tria.cell_iterators_on_level(level))
         if(cell->level_subdomain_id() == my_rank ||
            (cell->active() && cell->subdomain_id() == my_rank))
-          for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-            vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+          add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+            cell, vertices_owned_by_loclly_owned_cells);
 
       if(level > 0)
         for(auto cell : tria.cell_iterators_on_level(level - 1))
           if(cell->level_subdomain_id() == my_rank ||
              (cell->active() && cell->subdomain_id() == my_rank))
-            for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-              vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+              cell, vertices_owned_by_loclly_owned_cells);
 
       // helper function to determine if cell is locally relevant
       auto is_locally_relevant = [&](auto & cell) {
@@ -362,15 +366,15 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
       for(auto cell : tria.cell_iterators_on_level(level))
         if(cell->level_subdomain_id() == my_rank ||
            (cell->active() && cell->subdomain_id() == my_rank))
-          for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-            vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+          add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+            cell, vertices_owned_by_loclly_owned_cells);
 
       if(level > 0)
         for(auto cell : tria.cell_iterators_on_level(level - 1))
           if(cell->level_subdomain_id() == my_rank ||
              (cell->active() && cell->subdomain_id() == my_rank))
-            for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
-              vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+              cell, vertices_owned_by_loclly_owned_cells);
 
       // helper function to determine if cell is locally relevant
       auto is_locally_relevant = [&](auto & cell) {
