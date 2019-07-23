@@ -140,7 +140,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
 
   if(auto tria_pdt =
        dynamic_cast<const parallel::distributed::Triangulation<dim, spacedim> *>(&tria))
-    AssertThrow(comm != tria_pdt->get_communicator(),
+    AssertThrow(comm == tria_pdt->get_communicator(),
                 ExcMessage("MPI communicators do not match."));
 
   unsigned int my_rank = my_rank_in;
@@ -225,6 +225,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
         // a) extract cell definition (with old numbering of vertices)
         CellData<dim> cell_data;
         cell_data.material_id = cell->material_id();
+        cell_data.manifold_id = cell->manifold_id();
         for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
           cell_data.vertices[v] = cell->vertex_index(v);
         cells.push_back(cell_data);
@@ -238,9 +239,8 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
           boundary_ids.push_back(cell->face(f)->boundary_id());
 
         // e) save translation for corase grid: lid -> gid
-        coarse_lid_to_gid[cell_counter] = {convert_binary_to_gid<dim>(
-                                             cell->id().template to_binary<dim>()),
-                                           numbers::invalid_subdomain_id};
+        coarse_lid_to_gid[cell_counter] = convert_binary_to_gid<dim>(
+                                             cell->id().template to_binary<dim>());
 
         CellId::binary_type id;
         id.fill(0);
@@ -322,6 +322,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
       // b) extract cell definition (with old numbering of vertices)
       CellData<dim> cell_data;
       cell_data.material_id = cell->material_id();
+      cell_data.manifold_id = cell->manifold_id();
       for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
         cell_data.vertices[v] = cell->vertex_index(v);
       cells.push_back(cell_data);
@@ -335,9 +336,8 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
         boundary_ids.push_back(cell->face(f)->boundary_id());
 
       // e) save translation for corase grid: lid -> gid
-      coarse_lid_to_gid[cell_counter] = {convert_binary_to_gid<dim>(
-                                           cell->id().template to_binary<dim>()),
-                                         cell->level_subdomain_id()};
+      coarse_lid_to_gid[cell_counter] = convert_binary_to_gid<dim>(
+                                           cell->id().template to_binary<dim>());
 
       cell_counter++;
     }
@@ -358,7 +358,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
 
     std::map<int, int> coarse_gid_to_lid;
     for(auto i : coarse_lid_to_gid)
-      coarse_gid_to_lid[i.second.first] = i.first;
+      coarse_gid_to_lid[i.second] = i.first;
 
     for(unsigned int level = 0; level < tria.get_triangulation().n_global_levels(); level++)
     {
