@@ -8,6 +8,8 @@
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/grid_tools.h>
 
+#include "../../common/utilities.h"
+
 const MPI_Comm comm = MPI_COMM_WORLD;
 
 using namespace dealii;
@@ -17,11 +19,8 @@ template<int dim>
 void
 test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
-  // create pft
-  parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
-
   const double left  = 0;
-  const double right = 0;
+  const double right = 1;
 
   auto add_periodicy = [&](dealii::Triangulation<dim> & tria, const int offset = 0) {
     std::vector<GridTools::PeriodicFacePair<typename Triangulation<dim>::cell_iterator>>
@@ -41,12 +40,26 @@ test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
     tria.add_periodicity(periodic_faces);
   };
 
-  tria_pft.reinit(n_refinements, [&](dealii::Triangulation<dim> & tria) mutable {
-    GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
-    // new: add periodicy on serial mesh
-    add_periodicy(tria);
-    tria.refine_global(n_refinements);
-  });
+  Triangulation<dim> basetria;
+  GridGenerator::subdivided_hyper_cube(basetria, n_subdivisions);
+  // new: add periodicy on serial mesh
+  add_periodicy(basetria);
+  basetria.refine_global(n_refinements);
+
+  GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
+                                     basetria,
+                                     SparsityTools::Partitioner::metis);
+
+
+  // create instance of pft
+  parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
+
+  // extract relevant information form serial triangulation
+  auto construction_data =
+    parallel::fullydistributed::Utilities::copy_from_triangulation(basetria, tria_pft);
+
+  // actually create triangulation
+  tria_pft.reinit(construction_data);
 
   // new: add periodicy on fullydistributed mesh (!!!)
   add_periodicy(tria_pft, 2);

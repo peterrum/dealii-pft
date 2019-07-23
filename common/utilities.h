@@ -181,8 +181,23 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
     std::set<unsigned int> vertices_owned_by_loclly_owned_cells;
     for(auto cell : tria.cell_iterators())
       if(cell->active() && cell->subdomain_id() == my_rank)
+      {
+        for(unsigned int i = 0; i < GeometryInfo<dim>::faces_per_cell; i++)
+          if(cell->has_periodic_neighbor(i))
+          {
+            auto face_t = cell->face(i);
+            auto face_n = cell->periodic_neighbor(i)->face(cell->periodic_neighbor_face_no(i));
+            for(unsigned int j = 0; j < GeometryInfo<dim>::vertices_per_face; j++)
+            {
+              vertices_owned_by_loclly_owned_cells.insert(face_t->vertex_index(j));
+              vertices_owned_by_loclly_owned_cells.insert(face_n->vertex_index(j));
+            }
+          }
+
+
         for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
           vertices_owned_by_loclly_owned_cells.insert(cell->vertex_index(v));
+      }
 
     // helper function to determine if cell is locally relevant
     auto is_locally_relevant = [&](auto & cell) {
