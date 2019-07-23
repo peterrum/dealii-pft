@@ -64,10 +64,21 @@ suggests additional use cases and/or to extend the relevant classes.
 
 **Short description:** Convert a colored serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
-In the first step, all processes color all active cells of a serial triangulation in the same way.
-For this we simply apply `dealii::GridTools::partition_triangulation()` onto
-the serial triangulation. In a second step, the locally relevant mesh info is extracted
-and used to setup `PFT`.
+We create a serial triangulation `dealii::Triangulation`. We partition the active cells
+by simply applying `dealii::GridTools::partition_triangulation()` onto it. 
+
+The locally relevant mesh information is extracted by calling the new function:
+```cpp
+template<int dim, int spacedim = dim>
+ConstructionData<dim, spacedim>
+copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
+                        const Triangulation<dim, spacedim> &         tria_pft)
+```
+and used to setup `PFT`:
+```
+template<int dim, int spacedim = dim>
+reinit(ConstructionData<dim, spacedim> data);
+```
 
 **Execution:**
 
@@ -84,6 +95,28 @@ mpirun -np 5 ./step-0 2 4 # dim, n_refinements
 **Note:** This use case is motivated by the tests of `parallel::split::Triangulation`, which 
 have been discussed
 in [PR #3956](https://github.com/dealii/dealii/pull/3956).
+
+
+
+### Step 1: (De)serialization
+
+This steps presents the serialization and deserialization capabilities of `pft`.
+As in [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial)
+a serial mesh is converted into `pft`. 
+However, in between the construction data is written to files with the help of
+`boost`:
+```cpp
+template<int dim, int spacedim = dim>
+void
+serialize(ConstructionData<dim, spacedim> & data, std::string file_name, MPI_Comm comm);
+```
+ and read from right away from them:
+```cpp
+template<int dim, int spacedim = dim>
+ConstructionData<dim, spacedim>
+deserialize(std::string file_name, MPI_Comm comm);
+```
+
 
 ### Step 1: Static, globally uniformly refined mesh (parallel)
 
@@ -149,10 +182,6 @@ make
 mpirun -np 5 ./step-6 2 4 8
 ```
 
-### Step 7: Partition a serial mesh with periodic faces
-
-The same as [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial), but with a (de)serialization
-in between.
 
 
 ### Step 8: Repartition a distributed mesh
