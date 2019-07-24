@@ -4,7 +4,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 
-#include "../../common/utilities.h"
+#include <deal.II/distributed/tria_util.h>
 
 const MPI_Comm comm = MPI_COMM_WORLD;
 

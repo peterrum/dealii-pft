@@ -5,7 +5,7 @@
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/grid_tools.h>
 
-#include "../../common/utilities.h"
+#include <deal.II/distributed/tria_util.h>
 
 const MPI_Comm    comm      = MPI_COMM_WORLD;
 const std::string file_name = "mesh";
