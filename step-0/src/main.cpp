@@ -60,12 +60,30 @@ main(int argc, char ** argv)
   const int dim           = atoi(argv[1]);
   const int n_refinements = atoi(argv[2]);
 
-  if(dim == 1)
-    test<1>(n_refinements, comm);
-  else if(dim == 2)
-    test<2>(n_refinements, comm);
-  else if(dim == 3)
-    test<3>(n_refinements, comm);
-  else
-    AssertThrow(false, ExcMessage("Only working for dimensions 1, 2, and 3!"));
+  ConditionalOStream pcout(std::cout, dealii::Utilities::MPI::this_mpi_process(comm) == 0);
+
+  try
+  {
+    // clang-format off
+    pcout << "Run step-0:" 
+         << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm)
+         << " d=" << std::setw(2) << dim
+         << " r=" << std::setw(2) << n_refinements
+         << ":";
+    // clang-format on
+
+    if(dim == 1)
+      test<1>(n_refinements, comm);
+    else if(dim == 2)
+      test<2>(n_refinements, comm);
+    else if(dim == 3)
+      test<3>(n_refinements, comm);
+    else
+      AssertThrow(false, ExcMessage("Only working for dimensions 1, 2, and 3!"));
+    pcout << " success...." << std::endl;
+  }
+  catch(...)
+  {
+    pcout << " failed...." << std::endl;
+  }
 }
