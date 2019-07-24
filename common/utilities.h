@@ -176,7 +176,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
   auto & parts             = cd.parts;
 
   auto add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells =
-    [](auto & cell, auto & vertices_owned_by_loclly_owned_cells) {
+    [](auto & cell, auto & vertices_owned_by_loclly_owned_cells) mutable {
       for(unsigned int i = 0; i < GeometryInfo<dim>::faces_per_cell; i++)
         if(cell->has_periodic_neighbor(i))
         {
@@ -287,21 +287,25 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
           add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
             cell, vertices_owned_by_loclly_owned_cells);
 
-      if(level > 0)
-        for(auto cell : tria.cell_iterators_on_level(level - 1))
-          if(cell->level_subdomain_id() == my_rank ||
-             (cell->active() && cell->subdomain_id() == my_rank))
-            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
-              cell, vertices_owned_by_loclly_owned_cells);
+      for(auto cell : tria.active_cell_iterators())
+        if(cell->subdomain_id() == my_rank)
+          add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+            cell, vertices_owned_by_loclly_owned_cells);
 
       // helper function to determine if cell is locally relevant
       auto is_locally_relevant = [&](auto & cell) {
+        //for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+        //    std::cout << cell->vertex_index(v) << " ";
+        //std::cout << std::endl;
+        
         for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
           if(vertices_owned_by_loclly_owned_cells.find(cell->vertex_index(v)) !=
              vertices_owned_by_loclly_owned_cells.end())
             return true;
         return false;
       };
+      
+      //std::cout << "S" << vertices_owned_by_loclly_owned_cells.size() << std::endl;
 
       for(auto cell : tria.cell_iterators_on_level(level))
         if(is_locally_relevant(cell))
@@ -369,12 +373,11 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
           add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
             cell, vertices_owned_by_loclly_owned_cells);
 
-      if(level > 0)
-        for(auto cell : tria.cell_iterators_on_level(level - 1))
-          if(cell->level_subdomain_id() == my_rank ||
-             (cell->active() && cell->subdomain_id() == my_rank))
-            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
-              cell, vertices_owned_by_loclly_owned_cells);
+//      //if(level > 0)
+//        for(auto cell : tria.active_cell_iterators())
+//          if(cell->subdomain_id() == my_rank)
+//            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+//              cell, vertices_owned_by_loclly_owned_cells);
 
       // helper function to determine if cell is locally relevant
       auto is_locally_relevant = [&](auto & cell) {
@@ -384,7 +387,22 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
             return true;
         return false;
       };
+      
+      
+      std::set<unsigned int> vertices_owned_by_loclly_owned_cells_strong;
+        for(auto cell : tria.active_cell_iterators())
+          if(cell->subdomain_id() == my_rank)
+            add_vertices_of_cell_to_vertices_owned_by_loclly_owned_cells(
+              cell, vertices_owned_by_loclly_owned_cells_strong);
 
+      // helper function to determine if cell is locally relevant
+      auto is_locally_relevant_strong = [&](auto & cell) {
+        for(unsigned int v = 0; v < GeometryInfo<dim>::vertices_per_cell; v++)
+          if(vertices_owned_by_loclly_owned_cells_strong.find(cell->vertex_index(v)) !=
+             vertices_owned_by_loclly_owned_cells_strong.end())
+            return true;
+        return false;
+      };
 
 
       parts.push_back(Part());
@@ -397,7 +415,7 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
         auto id = cell->id().template to_binary<dim>();
         id[0]   = coarse_gid_to_lid[id[0]];
 
-        if(cell->active() && is_locally_relevant(cell))
+        if(cell->active() && is_locally_relevant_strong(cell))
           part.cells.emplace_back(id, cell->subdomain_id(), cell->level_subdomain_id());
         else if(is_locally_relevant(cell))
           part.cells.emplace_back(id, numbers::artificial_subdomain_id, cell->level_subdomain_id());
@@ -410,7 +428,12 @@ copy_from_triangulation(const dealii::Triangulation<dim, spacedim> & tria,
       std::sort(part.cells.begin(), part.cells.end(), [](auto a, auto b) {
         return convert_binary_to_gid<dim>(a.index) < convert_binary_to_gid<dim>(b.index);
       });
+      
+      
+    //for(auto cell : part.cells)
+    //    std::cout << CellId(cell.index).to_string() << std::endl;
     }
+    
   }
 
   return cd;
