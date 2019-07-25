@@ -239,7 +239,7 @@ mpirun -np 5 ./step-5 2 4 8
 
 **Results:**
 
-![step-5-overview](step-4/pictures/overview.png)
+![step-5-overview](step-5/pictures/overview.png)
 
 
 
