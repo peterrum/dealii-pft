@@ -1,8 +1,8 @@
 make -j10
 
 # fine grid of serial triangulation
-cd step-0
-mpirun -np 5 ./step-0 2 4
+cd step-1
+mpirun -np 5 ./step-1 2 4
 cd ..
 
 

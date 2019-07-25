@@ -1,9 +1,6 @@
-#include <deal.II/base/geometry_info.h>
 #include <deal.II/base/mpi.h>
 #include <deal.II/distributed/tria.h>
-#include <deal.II/dofs/dof_accessor.h>
-#include <deal.II/dofs/dof_handler.h>
-#include <deal.II/fe/fe_dgq.h>
+#include <deal.II/fe/fe_q.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 
@@ -14,32 +11,39 @@ const MPI_Comm comm = MPI_COMM_WORLD;
 using namespace dealii;
 
 
-template<int dim, int spacedim = dim>
+
+template<int dim>
 void
-test(const int n_refinements, const int n_subdivisions, MPI_Comm comm)
+test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
 {
-  // create pft
-  parallel::fullydistributed::Triangulation<dim, spacedim> tria_pft(
+  // create pdt
+  parallel::distributed::Triangulation<dim> tria_pdt(
+    comm,
+    dealii::Triangulation<dim>::none,
+    parallel::distributed::Triangulation<dim>::construct_multigrid_hierarchy);
+  GridGenerator::subdivided_hyper_cube(tria_pdt, n_subdivisions);
+  tria_pdt.refine_global(n_refinements);
+
+  // create instance of pft
+  parallel::fullydistributed::Triangulation<dim> tria_pft(
     comm, parallel::fullydistributed::Triangulation<dim>::construct_multigrid_hierarchy);
 
-  GridTools::AdditionalData additional_data;
-  additional_data.partition_group = GridTools::PartitioningGroup::shared;
-
-  // create serial triangulation and extract relevant information
+  // extract relevant information form pdt
   auto construction_data =
-    parallel::fullydistributed::Utilities::create_and_partition<dim, spacedim>(
-      [&](dealii::Triangulation<dim, spacedim> & tria) mutable {
-        GridGenerator::subdivided_hyper_cube(tria, n_subdivisions);
-        tria.refine_global(n_refinements);
-      },
-      tria_pft,
-      additional_data);
+    parallel::fullydistributed::Utilities::copy_from_triangulation(tria_pdt, tria_pft);
 
   // actually create triangulation
   tria_pft.reinit(construction_data);
 
-  // output mesh as VTU
+  // test triangulation
+  FE_Q<dim>       fe(2);
+  DoFHandler<dim> dof_handler(tria_pft);
+  dof_handler.distribute_dofs(fe);
+  dof_handler.distribute_mg_dofs();
+
+  // output meshes as VTU
   GridOut grid_out;
+  grid_out.write_mesh_per_processor_as_vtu(tria_pdt, "trid_pdt", true, true);
   grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", true, true);
 }
 
@@ -61,22 +65,20 @@ main(int argc, char ** argv)
   try
   {
     // clang-format off
-    pcout << "Run step-6: "
+    pcout << "Run step-8: "
           << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm)
-          << " d=" << std::setw(2) << dim
+          << " d=" << std::setw(2) << dim 
           << " r=" << std::setw(2) << n_refinements
           << " s=" << std::setw(2) << n_subdivisions
           << ":";
     // clang-format on
 
-    if(dim == 1)
-      test<1>(n_refinements, n_subdivisions, comm);
-    else if(dim == 2)
+    if(dim == 2)
       test<2>(n_refinements, n_subdivisions, comm);
     else if(dim == 3)
       test<3>(n_refinements, n_subdivisions, comm);
     else
-      AssertThrow(false, ExcMessage("Only working for dimensions 1, 2, and 3!"));
+      AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
     pcout << " success...." << std::endl;
   }
   catch(...)

@@ -1,4 +1,4 @@
 SET(TARGET_SRC src/main.cpp)
 
-ADD_EXECUTABLE("step-7" ${TARGET_SRC})
+ADD_EXECUTABLE( "step-7" ${TARGET_SRC})
 DEAL_II_SETUP_TARGET("step-7")

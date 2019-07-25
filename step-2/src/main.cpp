@@ -3,11 +3,12 @@
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
-#include <deal.II/grid/manifold_lib.h>
+#include <deal.II/grid/grid_tools.h>
 
 #include <deal.II/distributed/tria_util.h>
 
-const MPI_Comm comm = MPI_COMM_WORLD;
+const MPI_Comm    comm      = MPI_COMM_WORLD;
+const std::string file_name = "mesh";
 
 using namespace dealii;
 
@@ -15,78 +16,52 @@ using namespace dealii;
 
 template<int dim>
 void
-test(int n_refinements, const int n_subdivisions, MPI_Comm comm)
+test(int n_refinements, MPI_Comm comm)
 {
-  // create pdt
-  Triangulation<dim> basetria(Triangulation<dim>::limit_level_difference_at_vertices);
-
-
-  const Point<dim> center(1, 0);
-  const double     inner_radius = 0.5, outer_radius = 1.0;
-  GridGenerator::hyper_shell(basetria, center, inner_radius, outer_radius, n_subdivisions);
-  // basetria.reset_all_manifolds ();
-  for(int step = 0; step < n_refinements; ++step)
+  // serialization phase
   {
-    for(auto & cell : basetria.active_cell_iterators())
-    {
-      // if(cell->is_locally_owned ())
-      for(unsigned int v = 0; v < GeometryInfo<2>::vertices_per_cell; ++v)
-      {
-        const double distance_from_center = center.distance(cell->vertex(v));
-        if(std::fabs(distance_from_center - inner_radius) < 1e-10)
-        {
-          cell->set_refine_flag();
-          break;
-        }
-      }
-    }
-    basetria.execute_coarsening_and_refinement();
+    // create pdt
+    Triangulation<dim> basetria;
+    GridGenerator::hyper_L(basetria);
+    basetria.refine_global(n_refinements);
+
+    GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
+                                       basetria,
+                                       SparsityTools::Partitioner::metis);
+
+    // create instance of pft
+    parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
+
+    // extract relevant information form serial triangulation
+    auto construction_data =
+      parallel::fullydistributed::Utilities::copy_from_triangulation(basetria, tria_pft);
+
+    parallel::fullydistributed::Utilities::serialize(construction_data, file_name, comm);
+
+    GridOut grid_out;
+    if(Utilities::MPI::this_mpi_process(comm) == 0)
+      grid_out.write_mesh_per_processor_as_vtu(basetria, "tria", true, true);
   }
 
-  GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
-                                     basetria,
-                                     SparsityTools::Partitioner::metis);
-  // if(n_refinements!=0)
-  GridTools::partition_multigrid_levels(basetria);
+  // deserialization phase
+  {
+    auto construction_data =
+      parallel::fullydistributed::Utilities::deserialize<dim>(file_name, comm);
 
-  // for(auto cell : basetria){
-  //    std::cout << cell.id().to_string();
-  //    std::cout  << " " << cell.level_subdomain_id();
-  //    if(cell.active())
-  //      std::cout << " " << cell.subdomain_id();
-  //
-  //    std::cout << std::endl;
-  //}
+    // create instance of pft
+    parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
+    // actually create triangulation
+    tria_pft.reinit(construction_data);
 
-  // else
-  //  for(auto cell : basetria)
-  //      cell.set_level_subdomain_id(numbers::artificial_subdomain_id);
+    // test triangulation
+    FE_Q<dim>       fe(2);
+    DoFHandler<dim> dof_handler(tria_pft);
+    dof_handler.distribute_dofs(fe);
 
-  GridOut grid_out;
-  grid_out.write_mesh_per_processor_as_vtu(basetria, "trid_pdt", false, true);
-
-  // create instance of pft
-  parallel::fullydistributed::Triangulation<dim> tria_pft(
-    comm, parallel::fullydistributed::Triangulation<dim>::construct_multigrid_hierarchy);
-
-  tria_pft.set_manifold(0, SphericalManifold<dim>(center));
-
-  // extract relevant information form pdt
-  auto construction_data =
-    parallel::fullydistributed::Utilities::copy_from_triangulation(basetria, tria_pft);
-
-  // actually create triangulation
-  tria_pft.reinit(construction_data);
-
-
-  // test triangulation
-  FE_Q<dim>       fe(2);
-  DoFHandler<dim> dof_handler(tria_pft);
-  dof_handler.distribute_dofs(fe);
-  dof_handler.distribute_mg_dofs();
-
-  // output meshes as VTU
-  grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", false, false);
+    // output meshes as VTU
+    GridOut grid_out;
+    grid_out.write_mesh_per_processor_as_vtu(tria_pft, "tria_pft", true, true);
+  }
 }
 
 
@@ -96,31 +71,31 @@ main(int argc, char ** argv)
 {
   Utilities::MPI::MPI_InitFinalize mpi(argc, argv, 1);
 
-  AssertThrow(argc > 3, ExcMessage("You have not provided two command-line arguments."));
+  AssertThrow(argc > 2, ExcMessage("You have not provided two command-line arguments."));
 
-  const int dim            = atoi(argv[1]);
-  const int n_refinements  = atoi(argv[2]);
-  const int n_subdivisions = atoi(argv[3]);
+  const int dim           = atoi(argv[1]);
+  const int n_refinements = atoi(argv[2]);
 
   ConditionalOStream pcout(std::cout, dealii::Utilities::MPI::this_mpi_process(comm) == 0);
 
   try
   {
     // clang-format off
-    pcout << "Run step-2:"
+    pcout << "Run step-2: "
           << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm)
           << " d=" << std::setw(2) << dim
           << " r=" << std::setw(2) << n_refinements
-          << " s=" << std::setw(2) << n_subdivisions
           << ":";
     // clang-format on
 
-    if(dim == 2)
-      test<2>(n_refinements, n_subdivisions, comm);
+    if(dim == 1)
+      test<1>(n_refinements, comm);
+    else if(dim == 2)
+      test<2>(n_refinements, comm);
     else if(dim == 3)
-      test<3>(n_refinements, n_subdivisions, comm);
+      test<3>(n_refinements, comm);
     else
-      AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
+      AssertThrow(false, ExcMessage("Only working for dimensions 1, 2, and 3!"));
     pcout << " success...." << std::endl;
   }
   catch(...)

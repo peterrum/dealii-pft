@@ -44,14 +44,17 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 DEAL_II_SETUP_TARGET(pft)
 
-ADD_SUBDIRECTORY(step-0)
+# serial
 ADD_SUBDIRECTORY(step-1)
 ADD_SUBDIRECTORY(step-2)
 ADD_SUBDIRECTORY(step-3)
 ADD_SUBDIRECTORY(step-4)
 ADD_SUBDIRECTORY(step-5)
 ADD_SUBDIRECTORY(step-6)
+
+# parallel
 ADD_SUBDIRECTORY(step-7)
+ADD_SUBDIRECTORY(step-8)
 
 # we are not using this reference program anywhere: can we remove it? (TODO)
 #ADD_SUBDIRECTORY(applications/vlasov_poisson_reference_dealii)

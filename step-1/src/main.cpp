@@ -3,6 +3,7 @@
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/grid_tools.h>
 
 #include <deal.II/distributed/tria_util.h>
 
@@ -17,19 +18,20 @@ void
 test(int n_refinements, MPI_Comm comm)
 {
   // create pdt
-  parallel::distributed::Triangulation<dim> tria_pdt(
-    comm,
-    dealii::Triangulation<dim>::none,
-    parallel::distributed::Triangulation<dim>::construct_multigrid_hierarchy);
-  GridGenerator::hyper_cube(tria_pdt);
-  tria_pdt.refine_global(n_refinements);
+  Triangulation<dim> basetria;
+  GridGenerator::hyper_L(basetria);
+  basetria.refine_global(n_refinements);
+
+  GridTools::partition_triangulation(Utilities::MPI::n_mpi_processes(comm),
+                                     basetria,
+                                     SparsityTools::Partitioner::metis);
 
   // create instance of pft
   parallel::fullydistributed::Triangulation<dim> tria_pft(comm);
 
   // extract relevant information form serial triangulation
   auto construction_data =
-    parallel::fullydistributed::Utilities::copy_from_triangulation(tria_pdt, tria_pft);
+    parallel::fullydistributed::Utilities::copy_from_triangulation(basetria, tria_pft);
 
   // actually create triangulation
   tria_pft.reinit(construction_data);
@@ -41,8 +43,9 @@ test(int n_refinements, MPI_Comm comm)
 
   // output meshes as VTU
   GridOut grid_out;
-  grid_out.write_mesh_per_processor_as_vtu(tria_pdt, "trid_pdt", true, true);
-  grid_out.write_mesh_per_processor_as_vtu(tria_pft, "trid_pft", true, true);
+  if(Utilities::MPI::this_mpi_process(comm) == 0)
+    grid_out.write_mesh_per_processor_as_vtu(basetria, "tria", true, true);
+  grid_out.write_mesh_per_processor_as_vtu(tria_pft, "tria_pft", true, true);
 }
 
 
@@ -62,19 +65,21 @@ main(int argc, char ** argv)
   try
   {
     // clang-format off
-    pcout << "Run step-1:"
-          << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm) 
-          << " d=" << std::setw(2) << dim
-          << " r=" << std::setw(2) << n_refinements
-          << ":";
+    pcout << "Run step-1:" 
+         << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm)
+         << " d=" << std::setw(2) << dim
+         << " r=" << std::setw(2) << n_refinements
+         << ":";
     // clang-format on
 
-    if(dim == 2)
+    if(dim == 1)
+      test<1>(n_refinements, comm);
+    else if(dim == 2)
       test<2>(n_refinements, comm);
     else if(dim == 3)
       test<3>(n_refinements, comm);
     else
-      AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
+      AssertThrow(false, ExcMessage("Only working for dimensions 1, 2, and 3!"));
     pcout << " success...." << std::endl;
   }
   catch(...)

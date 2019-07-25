@@ -60,7 +60,24 @@ The flexibility of having a front-end and a back-end should become obvious.
 **Note:** The tutorials are a list of tested applications. Please feel free to 
 suggests additional use cases and/or to extend the relevant classes.
 
-### Step 0: Static, globally uniformly refined mesh (serial)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Step 1: Static, globally uniformly refined mesh (serial)
 
 **Short description:** Convert a colored (partitioned) serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
@@ -83,9 +100,9 @@ reinit(ConstructionData<dim, spacedim> data);
 **Execution:**
 
 ```bash
-cd step-0
+cd step-1
 make
-mpirun -np 5 ./step-0 2 4 # dim, n_refinements
+mpirun -np 5 ./step-1 2 4 # dim, n_refinements
 ```
 
 **Results:**
@@ -98,7 +115,16 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 
 
-### Step 1: (De)serialization
+
+
+
+
+
+
+
+
+
+### Step 2: (De)serialization
 
 This steps presents the serialization and deserialization capabilities of `pft`.
 As in [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial)
@@ -113,20 +139,29 @@ parallel::fullydistributed::Utilities::serialize(construction_data, file_name, c
 auto construction_data = parallel::fullydistributed::Utilities::deserialize<dim>(file_name, comm);
 ```
 
-
-### Step 1: Static, globally uniformly refined mesh (parallel)
-
-Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
+**Execution:**
 
 ```bash
-cd step-1
+cd step-2
 make
-mpirun -np 5 ./step-1 2 8
+mpirun -np 5 ./step-2 2 4 # dim, n_refinements
 ```
 
-### Step 2: Static, globally non-uniformly refined mesh 
 
-TODO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Step 3: Static, globally uniformly refined mesh with multigrid levels (serial)
 
@@ -139,7 +174,127 @@ make
 mpirun -np 5 ./step-3 2 4 8
 ```
 
-### Step 4: Static, globally uniformly refined mesh with multigrid levels (distributed)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Step 4: Static, globally non-uniformly refined mesh 
+
+```bash
+cd step-4
+make
+mpirun -np 5 ./step-4 2 4 8
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+### Step 5: Partition a serial mesh with periodic faces
+
+The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
+
+```bash
+cd step-5 
+make
+mpirun -np 5 ./step-5 2 4 8
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Step 6: Partition a serial mesh 
+
+using METIS
+
+```bash
+cd step-6
+make
+mpirun -np 5 ./step-6 2 4 8
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Step 7: Static, globally uniformly refined mesh (parallel)
+
+Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
+
+```bash
+cd step-7
+make
+mpirun -np 5 ./step-7 2 8
+```
+
+
+
+
+
+
+
+
+
+
+
+
+### Step 8: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
 **Short description:** Convert the fine mesh of a `PDT` from
 [step-1](https://github.com/peterrum/dealii-pft#step-1-static-globally-uniformly-refined-mesh-parallel)
@@ -149,34 +304,69 @@ mpirun -np 5 ./step-3 2 4 8
 **Execution:**
 
 ```bash
-cd step-4
+cd step-8
 make
-mpirun -np 5 ./step-4 2 4 8
+mpirun -np 8 ./step-8 4 3 5
 ```
 
 **Results:**
 
-![step-4-overview](step-4/pictures/overview.png)
+![step-3-overview](step-4/pictures/overview.png)
 
-### Step 5: Partition a serial mesh 
 
-using METIS
 
-```bash
-cd step-5
-make
-mpirun -np 5 ./step-5 2 4 8
-```
 
-### Step 6: Partition a serial mesh with periodic faces
 
-The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
 
-```bash
-cd step-6 
-make
-mpirun -np 5 ./step-6 2 4 8
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
