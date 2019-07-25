@@ -20,7 +20,9 @@ An (incomplete) list of requirements:
 - [x] I/O from/to `*.pft`-files
 - [ ] adaptive mesh
 
-The ticks indicate that this feature has been implemented.
+The ticks indicate that this feature has been implemented best to the knowledge of the author. The
+features were tested for a small set of triangulations (hypercube, subdivided hypercube, hyper-L, and
+hyper-shell with a large number of different number of refinements, subdivisions and process counts). 
 
 ## Concept
 
@@ -50,7 +52,7 @@ To be able to construct a fully partitioned triangulation, which fulfills the [r
 following ingredients:
 1. a locally relevant coarse-grid triangulation (vertices, cells with material and manifold ID, boundary IDs)
 2. a mapping of the locally relevant coarse-grid triangulation into the global coarse-grid triangulation
-3. information about which cell should be refined and information regarding the sudomain id and the level 
+3. information about which cell should be refined and information regarding the subdomain id and the level 
   subdomain id of each cell.
 
 This set of information is bundled in `parallel::fullydistributed::ConstructionData`, such that the user has 
@@ -66,7 +68,27 @@ that the local enumeration of the coarse cells have to translated to a global en
 sending data, and vice versa if the received data should be processed.
 
 - The new triangulation inherits from `parallel::Triangulation`. Small modifications were needed
-to enable parallel 1D simulations and periodicity (which is normally imposed on the coarse-grid)/
+to enable parallel 1D simulations and periodicity (which is normally imposed on the coarse-grid).
+
+- To be able to use the code, perform following steps:
+```bash
+# get the feature branch of deal.II build it with MPI, Metis, p4est:
+git clone https://github.com/peterrum/dealii.git
+cd dealii
+git checkout parallel-fullydistributed-triangulation
+cd ..
+mkdir dealii-build
+cd dealii-build
+cmake -D DEAL_II_WITH_MPI="ON" -D DEAL_II_WITH_METIS:BOOL="ON" -D DEAL_II_WITH_P4EST="ON" ../dealii
+make -j30
+cd ..
+
+# clone this repo and build it
+git clone https://github.com/peterrum/dealii-pft.git
+mkdir dealii-pft-build
+cd dealii-pft-build
+cmake ../dealii-pft-build
+```
 
 ## Examples (and nice pictures)
 
