@@ -97,17 +97,24 @@ The following pictures show use cases for which the new `PFT` framework has been
 ### NACA 0012 airfoil
 
 NACA 0012 airfoil with 156 coarse grid cells and 2 refinement levels. The fully 
-distributed triangulation was created as described in step-6.
+distributed triangulation was created as described in [step-6](https://github.com/peterrum/dealii-pft#step-6-multi-level-partitioning-of-a-serial-mesh).
 
 ![naca](figures/naca.png)
+
+The large amount of artificial cells and the sub-optimal partitioning of the fine
+grid is well visible in the case of `parallel::distributed::Triangulation`.
 
 Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
 
 ### Lung
 
-Deformed mesh of a lung with six generations with different refinement levels:
+Deformed mesh of a lung with six generations and 1,968 coarse-grid cells with 
+different refinement levels:
 
 ![lung](figures/lung_generations.png)
+
+Simulations with many more lung generations (>8 lung generations with at least 9396 coarse cell in total) 
+are needed to be able retrieve biological meaningful results.
 
 Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
