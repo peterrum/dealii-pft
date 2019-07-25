@@ -101,7 +101,7 @@ distributed triangulation was created as described in [step-6](https://github.co
 
 ![naca](figures/naca.png)
 
-The large amount of artificial cells and the sub-optimal partitioning of the fine
+The large amount of artificial cells (dark blue) and the sub-optimal partitioning of the fine
 grid is well visible in the case of `parallel::distributed::Triangulation`.
 
 Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
@@ -156,7 +156,7 @@ suggests additional use cases and/or to extend the relevant classes.
 
 
 
-### Step 1: Static, globally uniformly refined mesh (serial)
+### Step 1: Static, globally uniformly refined serial mesh
 
 **Short description:** Convert a colored (partitioned) serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
 
@@ -203,7 +203,7 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 
 
-### Step 2: (De)serialization
+### Step 2: (De)Serialization
 
 **Short description:** This steps presents the serialization and deserialization capabilities of `pft`.
 
@@ -243,7 +243,7 @@ mpirun -np 5 ./step-2 2 4 # dim, n_refinements
 
 
 
-### Step 3: Static, globally uniformly refined mesh with multigrid levels (serial)
+### Step 3: Static, globally uniformly refined serial mesh with multigrid levels
 
 **Short description:** Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
 
@@ -277,9 +277,13 @@ mpirun -np 5 ./step-3 2 4 8
 
 
 
-### Step 4: Static, globally non-uniformly refined mesh 
+### Step 4: Static, globally non-uniformly refined serial mesh 
 
-**Short description:** 
+**Short description:** Convert a serial triangulation with hanging nodes 
+(see also [step-1 in deal.II](https://www.dealii.org/developer/doxygen/deal.II/step_1.html)).
+
+**Note:** To be able to handle hanging nodes, it is required to constuct all 
+multigrid levels.
 
 **Execution:**
 
