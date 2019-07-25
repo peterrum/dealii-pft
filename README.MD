@@ -210,8 +210,9 @@ mpirun -np 5 ./step-4 2 4 8
 ```
 
 
+**Results:**
 
-
+![step-4-overview](step-4/pictures/overview.png)
 
 
 
