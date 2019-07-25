@@ -60,6 +60,8 @@ to fill this data structure - in a pre-processing step - before actually creatin
 As you will see, we provide a front-end to serialize and deserialize triangulations and to convert
 serial and distributed meshes.
 
+![Front and back end](figures/front-back-end.png)
+
 ## Additional information
 
 - A triangulation does not come alone. It is accompanied with a DoFHanlder policy. The new 
