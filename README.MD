@@ -33,17 +33,15 @@ sending data, and vice versa if the received data should be processed.
 
 ### NACA 0012 airfoil
 
+![naca](figures/naca.png)
+
 Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
-
-### Can (moving mesh)
-
-Thanks to: [Daniel Dengler](https://github.com/daniel-dengler)
 
 ### Lung
 
 Deformed mesh of a lung with six generations with different refinement levels:
 
-![step-4-overview](figures/lung_generations.png)
+![lung](figures/lung_generations.png)
 
 Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
