@@ -20,42 +20,43 @@ An (incomplete) list of requirements:
 - [x] I/O from/to `*.pft`-files
 - [ ] adaptive mesh refinement (AMR)
 
-The ticks indicate that this feature has been implemented best to the knowledge of the author. The
+The ticks indicate that this feature has been implemented to the author's best knowledge. The
 features were tested for a small set of triangulations (hypercube, subdivided hypercube, hyper-L, and
 hyper-shell with a large number of different number of refinements, subdivisions and process counts). 
 
 ## Concept
 
 The motivation to implement the new `PDT` framework origins in the following observations for 
-complex triangulations and/or for given meshed created by an external mesher. W
-e regard complex geometries which can be meshed only with a non-negligible 
-amount of coarse cell (>10.000):
+complex triangulations and/or for given meshed created by an external mesher. We
+regard complex geometries which can be meshed only with a non-negligible 
+number of coarse cell (>10.000):
 
-- storing the coarse-grid information on every process is too expensive from a  memory point of view
+- storing the coarse-grid information on every process is too expensive from a memory point of view
   (especially, if you consider that a single compute node on SuperMUC-NG has 48 CPUs, which would 
    mean that the coarse grid is duplicated 48 on the same node in the case that a pure MPI program
-   is considered). Normally, a process only needs a small section of the global triagnulation levels,
+   is considered). Normally, a process only needs a small section of the global triangulation,
    i.e. a small section of the coarse grid, such that a **partitioning of the coarse grid** is
-   not negligible.
+   indeed essential.
 
 - the distribution of the active cells - on the finest level - among all processes by simply 
   partitioning a space-filling curve might not lead to an optimal result: e.g. partitions belonging
-  to the same process might be discontiguous, leading to increased communication amount (within a
-  node and islands). **Graph-based partitioning** algorithms might be sound alternative.
+  to the same process might be discontinuous, leading to increased communication (within a
+  node and beyond). **Graph-based partitioning** algorithms might be a sound alternative.
 
 **Note:** The first aspect could be tackled via applying hybrid programming (MPI+X), e.i, all threads of
-a processes access the same triangulation class. This implementation does not investigate this 
+a processor access the same triangulation object. This implementation does not investigate this 
 aspect but rather investigates partitioning algorithms which explicitly exploit
 hardware properties regarding NUMA-domain, node and island size.
 
 To be able to construct a fully partitioned triangulation, which fulfills the [requirements](), we need
-following ingredients:
-1. a locally relevant coarse-grid triangulation (vertices, cells with material and manifold ID, boundary IDs)
+the following ingredients:
+1. a coarse-grid triangulation in the locally relevant flavor (vertices, cells with material and manifold ID,
+   boundary IDs), including a layer of ghosts
 2. a mapping of the locally relevant coarse-grid triangulation into the global coarse-grid triangulation
 3. information about which cell should be refined and information regarding the subdomain id and the level 
   subdomain id of each cell.
 
-This set of information is bundled in `parallel::fullydistributed::ConstructionData`, such that the user has 
+This set of information is bundled in `parallel::fullydistributed::ConstructionData`. The user has 
 to fill this data structure - in a pre-processing step - before actually creating the triangulation.
 As you will see, we provide a front-end to serialize and deserialize triangulations and to convert
 serial and distributed meshes.
@@ -66,7 +67,7 @@ serial and distributed meshes.
 
 - A triangulation does not come alone. It is accompanied with a DoFHanlder policy. The new 
 policy works similarly as the policy of `dealii::parallel::distributed::Triangulation` except
-that the local enumeration of the coarse cells have to translated to a global enumeration before
+that the local enumeration of the coarse cells needs to be translated to a global enumeration before
 sending data, and vice versa if the received data should be processed.
 
 - The new triangulation inherits from `parallel::Triangulation`. Small modifications were needed
@@ -216,7 +217,7 @@ However, in between the construction data is written to files with the help of
 ```cpp
 parallel::fullydistributed::Utilities::serialize(construction_data, file_name, comm);
 ```
- and read from right away from them:
+ and read right away from them:
 ```cpp
 auto construction_data = parallel::fullydistributed::Utilities::deserialize<dim>(file_name, comm);
 ```
