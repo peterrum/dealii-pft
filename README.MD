@@ -33,7 +33,7 @@ sending data, and vice versa if the received data should be processed.
 
 ### NACA 0012 airfoil
 
-NACA 0012 airfoil with ? coarse grid cells and ? refinement levels. The fully 
+NACA 0012 airfoil with 156 coarse grid cells and 2 refinement levels. The fully 
 distributed triangulation was created as described in step-6.
 
 ![naca](figures/naca.png)
@@ -289,9 +289,9 @@ mpirun -np 5 ./step-6 2 4 8
 
 
 
-### Step 7: Static, globally uniformly refined mesh (parallel)
+### Step 7: Static, globally uniformly refined mesh (distributed)
 
-**Short description:** Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
+**Short description:** Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`).
 
 
 **Execution:**
@@ -315,9 +315,7 @@ mpirun -np 5 ./step-7 2 8
 
 ### Step 8: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
-**Short description:** Convert the fine mesh of a `PDT` from
-[step-1](https://github.com/peterrum/dealii-pft#step-1-static-globally-uniformly-refined-mesh-parallel)
- with all multigrid levels to a `PFT`.
+**Short description:** Convert the all mesh levels of a `PDT`, needed for multigrid.
 
 
 **Execution:**
