@@ -258,9 +258,13 @@ mpirun -np 5 ./step-5 2 4 8
 
 
 
-### Step 6: Partition a serial mesh 
+### Step 6: Multi-level partitioning of a serial mesh 
 
-**Short description:** using METIS
+**Short description:** Create a serial triangulation on selected processes, partition the mesh 
+using METIS, taking in account node-locality, and finally distribute mesh.
+
+For distribution the construction data a serialized to a buffer (see [step-2](https://github.com/peterrum/dealii-pft#step-2-deserialization)), 
+which is sent via `MPI`.
 
 
 **Execution:**
