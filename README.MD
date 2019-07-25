@@ -1,7 +1,8 @@
 # A new fully distributed triangulation in deal.II
 
 This repo contains programs clarifying the usage of the new `parallel::fullydistributed::Triangulation` (short: `PFT`)
-in deal.II. For implementation details see the attached presentation (WIP) and/or the source code.
+in deal.II. For implementation details see the attached presentation (WIP) and/or the source code here and on 
+[my fork of deal.II](https://github.com/peterrum/dealii/tree/parallel-fullydistributed-triangulation).
 
 **Note:** The origin of the name `parallel::fullydistributed::Triangulation` is the need to 
 distinguish the class from `parallel::distributed::Triangulation` and to emphasis that also
@@ -9,7 +10,7 @@ the coarse mesh is partitioned. Please feel free to suggest alternative names!
 
 ## Requirements
 
-An (incomplete) list of requirements:
+An (incomplete) list of requirements - along the need to partition the coarse grid - is:
 - [x] extract from `dealii::Triangulation` (serial triangulation) 
 - [x] extract from `dealii::parallel::distributed::Triangulation` (parallel triangulation) 
 - [x] static mesh
@@ -27,8 +28,8 @@ hyper-shell with a large number of different number of refinements, subdivisions
 ## Concept
 
 The motivation to implement the new `PDT` framework origins in the following observations for 
-complex triangulations and/or for given meshed created by an external mesher. W
-e regard complex geometries which can be meshed only with a non-negligible 
+complex triangulations and/or for given meshed created by an external mesher. We 
+regard complex geometries which can be meshed only with a non-negligible 
 amount of coarse cell (>10.000):
 
 - storing the coarse-grid information on every process is too expensive from a  memory point of view
@@ -36,17 +37,18 @@ amount of coarse cell (>10.000):
    mean that the coarse grid is duplicated 48 on the same node in the case that a pure MPI program
    is considered). Normally, a process only needs a small section of the global triagnulation levels,
    i.e. a small section of the coarse grid, such that a **partitioning of the coarse grid** is
-   not negligible.
+   an option.
 
 - the distribution of the active cells - on the finest level - among all processes by simply 
-  partitioning a space-filling curve might not lead to an optimal result: e.g. partitions belonging
+  partitioning a space-filling curve might not lead to an optimal result for triangulations
+  originating from large coarse grids: e.g. partitions belonging
   to the same process might be discontiguous, leading to increased communication amount (within a
   node and islands). **Graph-based partitioning** algorithms might be sound alternative.
 
 **Note:** The first aspect could be tackled via applying hybrid programming (MPI+X), e.i, all threads of
-a processes access the same triangulation class. This implementation does not investigate this 
+a process access the same triangulation object. This implementation does not investigate this 
 aspect but rather investigates partitioning algorithms which explicitly exploit
-hardware properties regarding NUMA-domain, node and island size.
+hardware properties regarding NUMA-domain, node, and island sizes.
 
 To be able to construct a fully partitioned triangulation, which fulfills the [requirements](), we need
 following ingredients:
@@ -64,15 +66,15 @@ serial and distributed meshes.
 
 ## Additional information
 
-- A triangulation does not come alone. It is accompanied with a DoFHanlder policy. The new 
+- A triangulation does not come alone. It is accompanied with a `DoFHanlderPolicy`. The new 
 policy works similarly as the policy of `dealii::parallel::distributed::Triangulation` except
 that the local enumeration of the coarse cells have to translated to a global enumeration before
 sending data, and vice versa if the received data should be processed.
 
 - The new triangulation inherits from `parallel::Triangulation`. Small modifications were needed
-to enable parallel 1D simulations and periodicity (which is normally imposed on the coarse-grid).
+to enable parallel 1D simulations and periodicity (which used to be imposed on the coarse-grid).
 
-- To be able to use the code, perform following steps:
+- To be able to use the code, following steps have to be performed:
 ```bash
 # get the feature branch of deal.II build it with MPI, Metis, p4est:
 git clone https://github.com/peterrum/dealii.git
@@ -124,19 +126,18 @@ Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
 In the following, I give some short examples (referred to as *step*) using `PFT`.
 The examples are in contrast to the 
-examples in the last section quite academic and are ordered according to their difficulty in 
-steps.
+examples in the last section quite academic and are ordered according to their difficulty.
 
 ![pipeline](figures/pipeline.png)
 
 The structure of each tutorial is as follows:
 * create in a serial or a distributed triangulation,
-* extract the relevant information to construct a fully distributed triangulation via a front-end, and
-* finally create the fully distributed information with this information. As a validation
+* extract the relevant triangulation information to construct a fully distributed triangulation via a front-end, and
+* finally create the fully distributed triangulation with this information. As a validation
 step we setup the `DoFHanlder` (optionally also the multigrid levels are filled).
 
 
-The flexibility of having a front-end and a back-end should become obvious.
+The flexibility of having a front-end and a back-end should become obvious in the examples.
 
 **Note:** The tutorials are a list of tested applications. Please feel free to 
 suggests additional use cases and/or to extend the relevant classes.
@@ -160,10 +161,10 @@ suggests additional use cases and/or to extend the relevant classes.
 
 ### Step 1: Static, globally uniformly refined serial mesh
 
-**Short description:** Convert a colored (partitioned) serial fine mesh of a type`dealii::Triangulation` to a `PFT`.
+**Short description:** Convert a colored (partitioned) serial fine mesh of a type`dealii::Triangulation`.
 
 We create a serial triangulation `dealii::Triangulation`. We partition the active cells
-by simply applying `dealii::GridTools::partition_triangulation()` onto it. 
+by simply applying `dealii::GridTools::partition_triangulation()`. 
 
 The locally relevant mesh information is extracted by calling the new function:
 ```cpp
@@ -207,10 +208,10 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 ### Step 2: I/O: serialization and deserialization
 
-**Short description:** This steps presents the serialization and deserialization capabilities of `pft`.
+**Short description:** This step presents the serialization and deserialization capabilities of `PFT`.
 
-As in [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial)
-a serial mesh is converted into `pft`. 
+As in [step-1](https://github.com/peterrum/dealii-pft#step-1-static-globally-uniformly-refined-serial-mesh)
+a serial mesh is converted. 
 However, in between the construction data is written to files with the help of
 `boost`:
 ```cpp
@@ -247,7 +248,7 @@ mpirun -np 5 ./step-2 2 4 # dim, n_refinements
 
 ### Step 3: Static, globally uniformly refined serial mesh with multigrid levels
 
-**Short description:** Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
+**Short description:** Convert a serial mesh with all multigrid levels.
 
 **Execution:**
 
@@ -284,7 +285,7 @@ mpirun -np 5 ./step-3 2 4 8
 **Short description:** Convert a serial triangulation with hanging nodes 
 (see also [step-1 in deal.II](https://www.dealii.org/developer/doxygen/deal.II/step_1.html)).
 
-**Note:** To be able to handle hanging nodes, it is required to constuct all 
+**Note:** To be able to handle hanging nodes, it is currently required to construct all 
 multigrid levels.
 
 **Execution:**
@@ -344,10 +345,10 @@ mpirun -np 5 ./step-5 2 4 8
 
 ### Step 6: Multi-level partitioning of a serial mesh 
 
-**Short description:** Create a serial triangulation on selected processes, partition the mesh 
-using METIS, taking in account node-locality, and finally distribute mesh.
+**Short description:** Create a serial triangulation on selected master processes, partition the mesh 
+using METIS, taking in account node-locality, and finally distribute the mesh information.
 
-For distribution the construction data a serialized to a buffer (see [step-2](https://github.com/peterrum/dealii-pft#step-2-deserialization)), 
+**Note:** For distribution the construction data a serialized to a buffer (see [step-2](https://github.com/peterrum/dealii-pft#step-2-deserialization)), 
 which is sent via `MPI`.
 
 
@@ -403,7 +404,7 @@ mpirun -np 5 ./step-7 2 8
 
 ### Step 8: Static, globally uniformly refined mesh with multigrid levels (distributed)
 
-**Short description:** Convert the all mesh levels of a `PDT`, needed for multigrid.
+**Short description:** Convert a `PDT` with all multigrid levels.
 
 
 **Execution:**
