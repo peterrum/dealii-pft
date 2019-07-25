@@ -203,7 +203,7 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 
 
-### Step 2: (De)Serialization
+### Step 2: I/O: serialization and deserialization
 
 **Short description:** This steps presents the serialization and deserialization capabilities of `pft`.
 
