@@ -18,7 +18,7 @@ An (incomplete) list of requirements:
 - [x] periodicity
 - [x] 1D/2D/3D
 - [x] I/O from/to `*.pft`-files
-- [ ] adaptive mesh
+- [ ] adaptive mesh refinement (AMR)
 
 The ticks indicate that this feature has been implemented best to the knowledge of the author. The
 features were tested for a small set of triangulations (hypercube, subdivided hypercube, hyper-L, and
