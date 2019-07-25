@@ -33,6 +33,9 @@ sending data, and vice versa if the received data should be processed.
 
 ### NACA 0012 airfoil
 
+NACA 0012 airfoil with ? coarse grid cells and ? refinement levels. The fully 
+distributed triangulation was created as described in step-6.
+
 ![naca](figures/naca.png)
 
 Thanks to: [Elias Dejene](https://github.com/eliasstudiert)
@@ -124,7 +127,8 @@ in [PR #3956](https://github.com/dealii/dealii/pull/3956).
 
 ### Step 2: (De)serialization
 
-This steps presents the serialization and deserialization capabilities of `pft`.
+**Short description:** This steps presents the serialization and deserialization capabilities of `pft`.
+
 As in [step-0](https://github.com/peterrum/dealii-pft#step-0-static-globally-uniformly-refined-mesh-serial)
 a serial mesh is converted into `pft`. 
 However, in between the construction data is written to files with the help of
@@ -163,8 +167,9 @@ mpirun -np 5 ./step-2 2 4 # dim, n_refinements
 
 ### Step 3: Static, globally uniformly refined mesh with multigrid levels (serial)
 
-Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
+**Short description:** Convert the fine mesh of a serial mesh with all multigrid levels to a `PFT`.
 
+**Execution:**
 
 ```bash
 cd step-3 
@@ -194,6 +199,10 @@ mpirun -np 5 ./step-3 2 4 8
 
 ### Step 4: Static, globally non-uniformly refined mesh 
 
+**Short description:** 
+
+**Execution:**
+
 ```bash
 cd step-4
 make
@@ -216,7 +225,10 @@ mpirun -np 5 ./step-4 2 4 8
 
 ### Step 5: Partition a serial mesh with periodic faces
 
-The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
+**Short description:** The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
+
+
+**Execution:**
 
 ```bash
 cd step-5 
@@ -243,7 +255,10 @@ mpirun -np 5 ./step-5 2 4 8
 
 ### Step 6: Partition a serial mesh 
 
-using METIS
+**Short description:** using METIS
+
+
+**Execution:**
 
 ```bash
 cd step-6
@@ -271,7 +286,10 @@ mpirun -np 5 ./step-6 2 4 8
 
 ### Step 7: Static, globally uniformly refined mesh (parallel)
 
-Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
+**Short description:** Convert the fine mesh of a `parallel::distributed::Triangulation` (`PDT`) to a `PFT`.
+
+
+**Execution:**
 
 ```bash
 cd step-7
@@ -307,7 +325,7 @@ mpirun -np 8 ./step-8 4 3 5
 
 **Results:**
 
-![step-3-overview](step-4/pictures/overview.png)
+![step-8-overview](step-8/pictures/overview.png)
 
 
 
