@@ -120,11 +120,18 @@ Thanks to: [Martin Kronbichler](https://github.com/kronbichler)
 
 ## Tutorials
 
-In the following, I give some short examples using `PFT`. The examples are in contrast to the 
+In the following, I give some short examples (referred to as *step*) using `PFT`.
+The examples are in contrast to the 
 examples in the last section quite academic and are ordered according to their difficulty in 
 steps.
 
+![pipeline](figures/pipeline.png)
+
 The structure of each tutorial is as follows:
+* create in a serial or a distributed triangulation,
+* extract the relevant information to construct a fully distributed triangulation via a front-end, and
+* finally create the fully distributed information with this information. As a validation
+step we setup the `DoFHanlder` (optionally also the multigrid levels are filled).
 
 
 The flexibility of having a front-end and a back-end should become obvious.
