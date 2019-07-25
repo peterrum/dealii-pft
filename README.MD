@@ -177,7 +177,9 @@ make
 mpirun -np 5 ./step-3 2 4 8
 ```
 
+**Results:**
 
+![step-3-overview](step-3/pictures/overview.png)
 
 
 
