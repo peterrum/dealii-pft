@@ -107,7 +107,7 @@ mpirun -np 5 ./step-1 2 4 # dim, n_refinements
 
 **Results:**
 
-![step-0-overview](step-0/pictures/overview.png)
+![step-1-overview](step-1/pictures/overview.png)
 
 **Note:** This use case is motivated by the tests of `parallel::split::Triangulation`, which 
 have been discussed
@@ -216,8 +216,6 @@ mpirun -np 5 ./step-4 2 4 8
 
 
 
-```
-
 ### Step 5: Partition a serial mesh with periodic faces
 
 The same as [step-5](https://github.com/peterrum/dealii-pft#step-5-partition-a-serial-mesh), but with periodic faces in x-direction.
@@ -321,62 +319,5 @@ mpirun -np 8 ./step-8 4 3 5
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Step 8: Repartition a distributed mesh
-
-TODO: using ParMETIS
-
-### Step 9: Advanced topics
-
-- two-level partitioning to enable data locality on a compute node
-- timings
 
 
