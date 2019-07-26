@@ -1,11 +1,11 @@
 # A new, fully distributed triangulation in deal.II
 
-This repo contains programs that clarify the usage of the new class `parallel::fullydistributed::Triangulation` (short: `PFT`)
+This repo contains programs that clarify the usage of the new framework `parallel::fullydistributed::Triangulation` (short: `PFT`)
 in deal.II. For implementation details see the attached presentation (WIP) and/or the source code here and on 
 [my fork of deal.II](https://github.com/peterrum/dealii/tree/parallel-fullydistributed-triangulation).
 
 **Note:** The reason for the choice of the name `parallel::fullydistributed::Triangulation` is the need to 
-distinguish this class from `parallel::distributed::Triangulation` and to emphasise that also
+distinguish this class from `parallel::distributed::Triangulation` and to emphasize that also
 the coarse mesh is partitioned in this case. Please feel free to suggest alternative names!  
 
 ## Requirements
@@ -23,21 +23,21 @@ An (incomplete) list of requirements - beside the need to partition the coarse g
 
 The ticks indicate that the given features have been implemented to the best of the author's knowledge. The
 features were tested for a small set of triangulations (hypercube, subdivided hypercube, hyper-L, and
-hyper-shell with a large number of different numbers of refinements, subdivisions and process counts). 
+hyper-shell with a large number of different of refinement, subdivision and process counts). 
 
 ## Concept
 
 The motivation to implement the new `PFT` framework has its origins in the following observations about 
 complex triangulations and/or about given meshes created by an external mesh generator. I 
 regard complex geometries as geometries that can be meshed only with a non-negligible 
-amount of coarse cells (>10.000):
+number of coarse cells (>10,000):
 
 - storing the coarse-grid information on every process is too expensive from a memory point of view
-  (especially, if you consider that a single compute node on SuperMUC-NG has 48 CPUs, which would 
-   mean that the coarse grid is duplicated 48 times on the same node in the case that a pure MPI program
-   is considered). Normally, a process only needs a small section of the global triangulation levels,
+  (especially, if you consider that a single compute node on SuperMUC-NG has 48 CPUs, which means
+   the coarse grid is duplicated 48 times on the same node in the case that a pure MPI program
+   is considered). Normally, a process only needs a small section of the global triangulation,
    i.e., a small section of the coarse grid, such that a **partitioning of the coarse grid** is
-   an option.
+   indeed essential.
 
 - the distribution of the active cells - on the finest level - among all processes by simply 
   partitioning a space-filling curve might not lead to an optimal result for triangulations
@@ -46,18 +46,19 @@ amount of coarse cells (>10.000):
   node and beyond). **Graph-based partitioning** algorithms might a sound alternative.
 
 **Note:** The first aspect could be tackled via applying hybrid programming (MPI+X), i.e., all threads of
-a process access the same triangulation object. My implementation does not investigate this 
+a processor access the same triangulation object. My implementation does not investigate this 
 aspect, but rather investigates partitioning algorithms that explicitly exploit
 hardware properties regarding the NUMA-domain, the node and the island sizes.
 
-To be able to construct a fully partitioned triangulation that fulfills the [requirements](https://github.com/peterrum/dealii-pft#requirements) we need
+To be able to construct a fully partitioned triangulation that fulfills the [requirements](https://github.com/peterrum/dealii-pft#requirements), we need
 following ingredients:
-1. a locally relevant coarse-grid triangulation (vertices, cells with material and manifold IDs, boundary IDs)
+1. a locally relevant coarse-grid triangulation (vertices, cells with material and manifold IDs, boundary IDs;
+   including a layer of ghost cells)
 2. a mapping of the locally relevant coarse-grid triangulation into the global coarse-grid triangulation
 3. information about which cell should be refined as well as information regarding the subdomain ID and the level 
    subdomain ID of each cell.
 
-The ingredients listed above are bundled in `parallel::fullydistributed::ConstructionData` such that the user has 
+The ingredients listed above are bundled in `parallel::fullydistributed::ConstructionData`. The user has 
 to fill this data structure - in a pre-processing step - before actually creating the triangulation.
 As you will see, I provide a front-end to serialize and deserialize triangulations as well as to convert
 serial and distributed meshes.
@@ -68,7 +69,7 @@ serial and distributed meshes.
 
 - A triangulation does not come alone. It is accompanied by a `DoFHanlderPolicy`. The new 
 policy works similarly as the policy of `dealii::parallel::distributed::Triangulation` except
-that the local enumeration of the coarse cells has to be translated to a global enumeration before
+that the local enumeration of the coarse cells needs to be translated to a global enumeration before
 sending data, and vice versa, if the received data should be processed.
 
 - The new triangulation inherits from `parallel::Triangulation`. Small modifications were needed
@@ -124,7 +125,7 @@ Thanks to [Martin Kronbichler](https://github.com/kronbichler)!
 
 ## Tutorials
 
-In the following, I give eight short tutorials (referred to as *step*s) using `PFT`.
+In the following, I provide eight short tutorials (referred to as *step*s) using `PFT`.
 These tutorials are - in contrast to the 
 examples described above - quite academic and are ordered according to their difficulty.
 
@@ -217,7 +218,7 @@ However, in between the construction data is written to files with the help of t
 ```cpp
 parallel::fullydistributed::Utilities::serialize(construction_data, file_name, comm);
 ```
- and read from right away from them:
+ and read right away from them:
 ```cpp
 auto construction_data = parallel::fullydistributed::Utilities::deserialize<dim>(file_name, comm);
 ```
