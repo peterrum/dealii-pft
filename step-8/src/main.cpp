@@ -4,7 +4,9 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 
-#include <deal.II/distributed/tria_util.h>
+#include <deal.II/distributed/fullydistributed_tria.h>
+#include <deal.II/distributed/fullydistributed_tria_util.h>
+
 
 const MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -62,27 +64,27 @@ main(int argc, char ** argv)
 
   ConditionalOStream pcout(std::cout, dealii::Utilities::MPI::this_mpi_process(comm) == 0);
 
-  try
-  {
-    // clang-format off
+  // try
+  //{
+  // clang-format off
     pcout << "Run step-8: "
           << " p=" << std::setw(2) << dealii::Utilities::MPI::n_mpi_processes(comm)
           << " d=" << std::setw(2) << dim 
           << " r=" << std::setw(2) << n_refinements
           << " s=" << std::setw(2) << n_subdivisions
           << ":";
-    // clang-format on
+  // clang-format on
 
-    if(dim == 2)
-      test<2>(n_refinements, n_subdivisions, comm);
-    else if(dim == 3)
-      test<3>(n_refinements, n_subdivisions, comm);
-    else
-      AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
-    pcout << " success...." << std::endl;
-  }
-  catch(...)
-  {
-    pcout << " failed...." << std::endl;
-  }
+  if(dim == 2)
+    test<2>(n_refinements, n_subdivisions, comm);
+  else if(dim == 3)
+    test<3>(n_refinements, n_subdivisions, comm);
+  else
+    AssertThrow(false, ExcMessage("Only working for dimensions 2 and 3!"));
+  pcout << " success...." << std::endl;
+  //}
+  // catch(...)
+  //{
+  //  pcout << " failed...." << std::endl;
+  //}
 }

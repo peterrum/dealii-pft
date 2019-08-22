@@ -414,7 +414,7 @@ mpirun -np 5 ./step-7 2 8
 ```bash
 cd step-8
 make
-mpirun -np 8 ./step-8 4 3 5
+mpirun -np 8 ./step-8 2 3 5
 ```
 
 **Results:**
